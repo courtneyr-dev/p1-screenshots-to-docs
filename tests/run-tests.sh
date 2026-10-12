@@ -37,7 +37,7 @@ cd "$SKILL" || exit 1
 [ -d node_modules ] || { echo "Run: bash scripts/setup.sh (in $SKILL)"; exit 1; }
 
 echo "== static"
-for f in capture capture-window preflight chrome handoff compare-runs cleanup validate-skill check-identity figma-plan figma-upload make-gallery routes verify-site inventory publish-markdown draft-alt figma-export gdocs-manifest setup build-figma-plugin watch; do t "node --check scripts/$f.mjs" node --check "scripts/$f.mjs"; done
+for f in capture capture-window preflight chrome handoff record-annotation compare-runs cleanup validate-skill check-identity figma-plan figma-upload make-gallery routes verify-site inventory publish-markdown draft-alt figma-export gdocs-manifest setup build-figma-plugin watch; do t "node --check scripts/$f.mjs" node --check "scripts/$f.mjs"; done
 for f in config presets release-sources watch; do t "node --check scripts/lib/$f.mjs" node --check "scripts/lib/$f.mjs"; done
 t "JSON files parse" python3 -c "
 import json,glob
@@ -242,7 +242,7 @@ t "a pattern that needs the workstream fails clearly when the report doesn't rec
 t "an invalid page name pattern is refused before planning" bash -c "node scripts/figma-plan.mjs --dir '$TMP/named' --config '$TMP/cfg.json' --set figma.pageNamePattern='{topic} {bogus}' >'$TMP/bp.log' 2>&1; [ \$? -eq 1 ] && grep -q 'unknown token' '$TMP/bp.log'"
 
 echo "== portability: docs handoff location and format"
-t "handoff note is written to the configured directory with the run's values and no unfilled placeholders" bash -c "node scripts/handoff.mjs --config '$TMP/cfg.json' --dir '$TMP/named' --release 'QA release' --author 'QA Author' >'$TMP/h.log' 2>&1 && f=\$(ls '$TMP'/notes/handoff-*.md) && grep -q 'QA release' \"\$f\" && grep -q 'qa-workstream' \"\$f\" && grep -q 'QA Project' \"\$f\" && grep -q 'fixture-parity_' \"\$f\" && grep -q 'TO FILL' \"\$f\" && grep -q 'unverified' \"\$f\" && grep -q 'needs blockType' \"\$f\" && ! grep -q '{{' \"\$f\""
+t "handoff note is written to the configured directory with the run's values and no unfilled placeholders" bash -c "node scripts/handoff.mjs --skip-annotation test-fixture --config '$TMP/cfg.json' --dir '$TMP/named' --release 'QA release' --author 'QA Author' >'$TMP/h.log' 2>&1 && f=\$(ls '$TMP'/notes/handoff-*.md) && grep -q 'QA release' \"\$f\" && grep -q 'qa-workstream' \"\$f\" && grep -q 'QA Project' \"\$f\" && grep -q 'fixture-parity_' \"\$f\" && grep -q 'TO FILL' \"\$f\" && grep -q 'unverified' \"\$f\" && grep -q 'needs blockType' \"\$f\" && ! grep -q '{{' \"\$f\""
 t "the handoff note's shot table is one contiguous markdown table with a row per shot of the run" python3 - "$TMP" <<'EOF'
 import glob,sys
 t=open(glob.glob(sys.argv[1]+'/notes/handoff-*.md')[0]).read().split('\n')
@@ -253,9 +253,27 @@ for l in t[i:]:
     rows.append(l)
 assert len(rows)==2+3, len(rows)  # header, separator, and the fixture run's three shots
 EOF
-t "json handoff format parses" bash -c "node scripts/handoff.mjs --config '$TMP/cfg.json' --set docs.format=json --dir '$TMP/named' --release 'QA release' >'$TMP/hj.log' 2>&1 && python3 -c \"import json,glob;d=json.load(open(glob.glob('$TMP/notes/handoff-*.json')[0]));assert d['release']=='QA release' and d['workstream']=='qa-workstream'\""
-t "handoff needs a release name" bash -c "node scripts/handoff.mjs --config '$TMP/cfg.json' --dir '$TMP/named' >/dev/null 2>&1; [ \$? -eq 1 ]"
-t "handoff refuses a directory inside the tool folder" bash -c "node scripts/handoff.mjs --config '$TMP/cfg.json' --set docs.handoffDir='$ROOT/notes' --dir '$TMP/named' --release x >'$TMP/hb.log' 2>&1; [ \$? -eq 1 ] && grep -q 'inside this tool' '$TMP/hb.log' && [ ! -e '$ROOT/notes' ]"
+t "json handoff format parses" bash -c "node scripts/handoff.mjs --skip-annotation test-fixture --config '$TMP/cfg.json' --set docs.format=json --dir '$TMP/named' --release 'QA release' >'$TMP/hj.log' 2>&1 && python3 -c \"import json,glob;d=json.load(open(glob.glob('$TMP/notes/handoff-*.json')[0]));assert d['release']=='QA release' and d['workstream']=='qa-workstream'\""
+t "handoff needs a release name" bash -c "node scripts/handoff.mjs --skip-annotation test-fixture --config '$TMP/cfg.json' --dir '$TMP/named' >/dev/null 2>&1; [ \$? -eq 1 ]"
+t "handoff refuses a directory inside the tool folder" bash -c "node scripts/handoff.mjs --skip-annotation test-fixture --config '$TMP/cfg.json' --set docs.handoffDir='$ROOT/notes' --dir '$TMP/named' --release x >'$TMP/hb.log' 2>&1; [ \$? -eq 1 ] && grep -q 'inside this tool' '$TMP/hb.log' && [ ! -e '$ROOT/notes' ]"
+echo "== annotation gate: a handoff needs an annotated frame for every shot"
+rm -rf "$TMP/gate" "$TMP/gnotes"; cp -R "$TMP/named" "$TMP/gate"; rm -f "$TMP/gate/annotation-record.json"
+GATE_SLUGS=$(python3 -c "import json;print(' '.join(dict.fromkeys(r['slug'] for r in json.load(open('$TMP/gate/figma-plan.json'))['rows'])))")
+GATE_FIRST=${GATE_SLUGS%% *}
+gate_h() { node scripts/handoff.mjs --config "$TMP/cfg.json" --set docs.handoffDir="$TMP/gnotes" --dir "$TMP/gate" --release 'QA release' "$@"; }
+t "handoff refuses when no shot is annotated, says how to record one, and writes nothing" bash -c "$(declare -f gate_h); TMP='$TMP'; gate_h >'$TMP/g1.log' 2>&1; [ \$? -eq 1 ] && grep -q 'annotation is required' '$TMP/g1.log' && grep -q 'record-annotation.mjs' '$TMP/g1.log' && [ ! -e '$TMP/gnotes' ]"
+t "record-annotation refuses without the kit-only and redacted attestations" bash -c "node scripts/record-annotation.mjs --dir '$TMP/gate' --slug $GATE_FIRST --annotated-node-id 87:2 >/dev/null 2>&1; [ \$? -eq 1 ]"
+t "record-annotation refuses an annotated node ID that equals the clean node ID" bash -c "node scripts/record-annotation.mjs --dir '$TMP/gate' --slug $GATE_FIRST --annotated-node-id 87:2 --clean-node-id 87:2 --kit-only --redacted >/dev/null 2>&1; [ \$? -eq 1 ]"
+t "record-annotation refuses a slug that is not in the run" bash -c "node scripts/record-annotation.mjs --dir '$TMP/gate' --slug not-a-shot --annotated-node-id 87:2 --kit-only --redacted >/dev/null 2>&1; [ \$? -eq 1 ]"
+t "handoff still refuses while any shot is unrecorded" bash -c "node scripts/record-annotation.mjs --dir '$TMP/gate' --slug $GATE_FIRST --annotated-node-id 87:2 --clean-node-id 84:13 --kit-only --redacted >/dev/null 2>&1; set -- $GATE_SLUGS; [ \$# -lt 2 ] && exit 0; $(declare -f gate_h); TMP='$TMP'; gate_h >/dev/null 2>&1; [ \$? -eq 1 ]"
+t "handoff passes once every shot is recorded, and the note lists the annotated frames" bash -c "for s in $GATE_SLUGS; do node scripts/record-annotation.mjs --dir '$TMP/gate' --slug \$s --annotated-node-id 88:2 --kit-only --redacted >/dev/null || exit 1; done; $(declare -f gate_h); TMP='$TMP'; gate_h >/dev/null 2>&1 && grep -q 'Annotation: Complete' '$TMP'/gnotes/handoff-*.md && grep -q '88:2' '$TMP'/gnotes/handoff-*.md"
+t "a record that is not attested as redacted is refused" bash -c "python3 - <<PY
+import json
+p='$TMP/gate/annotation-record.json'; d=json.load(open(p)); d['frames']['$GATE_FIRST']['redacted']=False; json.dump(d,open(p,'w'))
+PY
+$(declare -f gate_h); TMP='$TMP'; gate_h >'$TMP/g2.log' 2>&1; [ \$? -eq 1 ] && grep -q 'not attested as redacted' '$TMP/g2.log'"
+t "--skip-annotation needs a reason" bash -c "$(declare -f gate_h); TMP='$TMP'; gate_h --skip-annotation '' >/dev/null 2>&1; [ \$? -eq 1 ]"
+t "--skip-annotation with a reason writes the note and says the annotation was skipped" bash -c "rm -rf '$TMP/gnotes'; rm -f '$TMP/gate/annotation-record.json'; $(declare -f gate_h); TMP='$TMP'; gate_h --skip-annotation 'release freeze' >/dev/null 2>&1 && grep -q 'Annotation: SKIPPED by request: release freeze' '$TMP'/gnotes/handoff-*.md"
 
 echo "== blocked shots (HTTP 403)"
 start_server 4203 "$FX/forbidden-server.mjs" || exit 1

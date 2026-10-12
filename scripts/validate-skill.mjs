@@ -68,6 +68,19 @@ if (existsSync(refDir)) {
   for (const f of readdirSync(refDir)) if (!body.includes(`references/${f}`)) errors.push(`references/${f} isn't linked from SKILL.md`);
 }
 
+// Rules every run must follow. If someone edits SKILL.md and drops one, CI fails.
+const REQUIRED = [
+  ['## Always do, without asking', 'the "Always do, without asking" section'],
+  ['Push the run to Figma', 'the always-push-to-Figma rule'],
+  ['Annotation kit', 'the Annotation kit rule'],
+  ['docs/how-to/annotate.md', 'the pointer to docs/how-to/annotate.md'],
+  ['Never style marks by hand', 'the no hand-styled marks rule'],
+  ['Redact avatars, names, emails, and IDs', 'the redaction rule'],
+  ['built from Annotation kit instances only', 'the annotated-frame completion item'],
+  ['record-annotation.mjs', 'the record-annotation step that the handoff gate needs'],
+];
+for (const [phrase, what] of REQUIRED) if (!body.includes(phrase)) errors.push(`SKILL.md is missing ${what} (looked for "${phrase}")`);
+
 for (const w of warnings) console.log(`  ! ${w}`);
 if (errors.length) {
   console.error(`SKILL.md is invalid: ${errors.length} problem${errors.length === 1 ? '' : 's'}.`);

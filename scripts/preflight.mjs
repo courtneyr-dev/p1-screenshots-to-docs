@@ -22,7 +22,7 @@ import { loadConfig, applyOverrides, validateConfig, formatValidation, derivePar
 const { values } = parseArgs({
   options: {
     config: { type: 'string' },
-    need: { type: 'string', default: 'capture' },
+    need: { type: 'string', default: 'capture,figma,handoff' },
     brief: { type: 'string' },
     set: { type: 'string', multiple: true },
     'check-chrome': { type: 'boolean' },
@@ -33,7 +33,7 @@ const { values } = parseArgs({
 if (values.help || !values.config) {
   console.log(`Usage: node preflight.mjs --config <file> [--need capture,figma,handoff] [--brief <brief.json>] [--set key=value] [--check-chrome]
 
---need      Which parts of the workflow this run uses (default: capture).
+--need      Which parts of the workflow this run uses (default: capture,figma,handoff; Figma and the handoff are part of every run).
 --brief     Also check that every {{placeholder}} in the brief has a value, and list shots that will be skipped.
 --check-chrome  Ask the Chrome debugging endpoint whether it is running (one HTTP request; opens no browser).`);
   process.exit(values.help ? 0 : 1);

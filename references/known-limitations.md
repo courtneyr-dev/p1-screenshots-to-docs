@@ -22,7 +22,7 @@
 - **Images go through upload URLs.** `createImageAsync` is blocked in `use_figma`. URLs are single-use, expire in 10 minutes, and accept up to 10 MB per asset and 60 per call.
 - **Minute-resolution run IDs.** Two captures in one minute collide; the second push is rejected as a duplicate.
 - **Seat quota.** A View seat exhausted its MCP tool-call limit during the proof of concept. Each run needs at least three calls.
-- **Annotation is manual.** Nothing annotates or exports for you.
+- **Annotation is by attestation.** An agent or a person places Annotation kit instances in Figma, and nothing exports the annotated frames. `handoff.mjs` refuses until each shot is recorded with `record-annotation.mjs`, but that tool can't read Figma: it trusts the `--kit-only` and `--redacted` flags, so a reviewer still checks the frames.
 
 ## Screenshot inventory
 
