@@ -376,32 +376,44 @@ else
 fi
 
 echo "== hygiene: no personal identifiers, no secrets"
-t "generic files contain no personal identifiers, project values, hosted URLs, emails, UUIDs, or machine paths" python3 - "$ROOT" <<'EOF'
+# Scan what git would commit: tracked files plus untracked ones that aren't ignored. Local configs and
+# screenshots are git-ignored and hold real values by design. Outside a git checkout, scan everything.
+python3 - "$ROOT" "$TMP/scan-files" <<'EOF'
+import os,subprocess,sys
+root,out=sys.argv[1],sys.argv[2]
+r=subprocess.run(['git','-C',root,'ls-files','-co','--exclude-standard'],capture_output=True,text=True)
+if r.returncode==0: files=r.stdout.splitlines()
+else:
+    files=[]
+    for dp,dn,fn in os.walk(root):
+        dn[:]=[d for d in dn if d not in ('node_modules','.git')]
+        files+=[os.path.relpath(os.path.join(dp,f),root) for f in fn]
+files=[f for f in files if os.path.isfile(os.path.join(root,f)) and not f.startswith('node_modules/')]
+open(out,'w').write('\n'.join(files)+'\n')
+EOF
+t "generic files contain no personal identifiers, project values, hosted URLs, emails, UUIDs, or machine paths" python3 - "$ROOT" "$TMP/scan-files" <<'EOF'
 import os,re,sys
 root=sys.argv[1]
+files=open(sys.argv[2]).read().splitlines()
 strict=re.compile(r"courtney|courane|courtneyr|gmail\.com|/Users/|pantheonsite|live-p1-docs|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
 project=re.compile(r"trogdor", re.I)
 email=re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-skip_dirs={'node_modules','.git'}
 # The only file that may name the proof of concept's demo project: the POC record.
 allow_project=('references/poc-results.md',)
 bad=[]
-for dp,dn,fn in os.walk(root):
-    dn[:]=[d for d in dn if d not in skip_dirs]
-    for f in fn:
-        p=os.path.join(dp,f); rel=os.path.relpath(p,root)
-        if f=='package-lock.json' or rel=='tests/run-tests.sh': continue
-        try: t=open(p,encoding='utf-8').read()
-        except Exception: continue
-        for m in strict.finditer(t): bad.append((rel,m.group(0)))
-        if not rel.startswith(allow_project):
-            for m in project.finditer(t): bad.append((rel,m.group(0)))
-        for m in email.finditer(t):
-            if not re.search(r'noreply|example\.(com|org)$',m.group(0)): bad.append((rel,m.group(0)))
+for rel in files:
+    if os.path.basename(rel)=='package-lock.json' or rel=='tests/run-tests.sh': continue
+    try: t=open(os.path.join(root,rel),encoding='utf-8').read()
+    except Exception: continue
+    for m in strict.finditer(t): bad.append((rel,m.group(0)))
+    if not rel.startswith(allow_project):
+        for m in project.finditer(t): bad.append((rel,m.group(0)))
+    for m in email.finditer(t):
+        if not re.search(r'noreply|example\.(com|org)$',m.group(0)): bad.append((rel,m.group(0)))
 assert not bad, bad[:10]
 EOF
 t "no credentials or keys in the tool's files (gitleaks, or patterns when gitleaks is absent)" bash -c "
-mkdir -p '$TMP/scan' && tar -C '$ROOT' --exclude=node_modules --exclude=.git -cf - . | tar -C '$TMP/scan' -xf - &&
+mkdir -p '$TMP/scan' && tar -C '$ROOT' -cf - -T '$TMP/scan-files' | tar -C '$TMP/scan' -xf - &&
 if command -v gitleaks >/dev/null 2>&1; then gitleaks detect --source '$TMP/scan' --no-git --redact >'$TMP/gl.log' 2>&1; else ! grep -rIE 'gho_[A-Za-z0-9]{20}|ghp_[A-Za-z0-9]{20}|AKIA[0-9A-Z]{16}|BEGIN (RSA|OPENSSH|EC) PRIVATE KEY|xox[baprs]-[A-Za-z0-9-]{10}' '$TMP/scan' --exclude=run-tests.sh; fi"
 t ".gitignore keeps profiles, cookies, storage state, env files, upload URLs, reports, and the config out of git" python3 - <<'EOF'
 g=open('.gitignore').read()
