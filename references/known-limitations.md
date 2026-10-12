@@ -26,7 +26,7 @@
 
 ## Screenshot inventory
 
-- **Only the capture path has run live, and only on one account.** On 2026-10-02 the author ran brief, capture, `record-capture`, gallery, Figma plan, and handoff against a signed-in local P1 editor, using a temporary inventory outside the repository. Nothing has run against Figma, Google Docs, or Content Publisher, and no second person has run it. Everything else in the inventory workflow is tested with fixtures and mocks. Frame names, Dev Resource links, and version names are planned and recorded, not created in Figma.
+- **Live runs so far are one author, one Figma file, and one P1 site.** On 2026-10-02 the author ran brief, capture, `record-capture`, gallery, Figma plan, and handoff against a signed-in local P1 editor, using a temporary inventory outside the repository. Figma pushes have run live since 2026-10-06 (`figma-review.md` records the first). On 2026-10-12 a run was captured, pushed, and uploaded, and an agent built annotated frames from the Annotation kit with `use_figma`, in the author's design file, without an inventory. Nothing has run against Google Docs or Content Publisher, and no second person has run it. Everything else in the inventory workflow is tested with fixtures and mocks. Dev Resource links and Figma version names are planned and recorded, not created in Figma.
 - **The uploader only sends to Figma hosts, including after a redirect.** `figma-upload.mjs` refuses, before sending anything, a URL that isn't https on `figma.com` or a subdomain. Figma's real upload host is `https://mcp.figma.com` (seen on the first live push, 2026-10-06), which passes. Redirects aren't followed automatically: only 307 and 308 (which keep the POST and its body) are followed, each target must pass the same check before anything is sent to it, and the uploader stops after 3 hops. `P1_UPLOAD_ALLOW_LOOPBACK=1` allows loopback hosts for local tests only. Whether Figma's upload URLs ever redirect hasn't been observed.
 - **Figma evidence is whatever a person recorded.** Nothing reads Figma back to check a file URL, node ID, or version name.
 - **Publication is verified by a person.** The tool compares alt text fingerprints and records the result; it doesn't fetch the published page. Content Publisher may re-encode images, so the published file's checksum can differ from the asset's.
@@ -46,7 +46,7 @@
 - Sign-in by someone other than the author, or on another machine. The live second-user smoke test is **pending** (`second-user-smoke-test.md`); only the offline second-project test has run.
 - Projects, workstreams, and pages other than the demo project's, on a live editor.
 - A release-time refresh against a real release. The release rehearsal runs against two fixture editors (`release-refresh.md`), not P1.
-- The live signed-in capture and the Figma push after this portability work. `npm test` covers them with a fixture editor, a Figma API mock, and an upload mock. Those follow the documented contracts but aren't P1 or Figma, so a live run can still find a mismatch.
+- A live signed-in capture and Figma push by a second person or on a second project. Both ran live once on 2026-10-12 (one author, one P1 site, one Figma file). `npm test` covers them with a fixture editor, a Figma API mock, and an upload mock. Those follow the documented contracts but aren't P1 or Figma, so a second live run can still find a mismatch.
 
 ## Repository
 
