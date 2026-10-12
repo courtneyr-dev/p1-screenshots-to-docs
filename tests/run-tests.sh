@@ -37,7 +37,7 @@ cd "$SKILL" || exit 1
 [ -d node_modules ] || { echo "Run: bash scripts/setup.sh (in $SKILL)"; exit 1; }
 
 echo "== static"
-for f in capture preflight chrome handoff compare-runs cleanup validate-skill check-identity figma-plan figma-upload make-gallery routes verify-site inventory publish-markdown draft-alt figma-export gdocs-manifest setup build-figma-plugin watch; do t "node --check scripts/$f.mjs" node --check "scripts/$f.mjs"; done
+for f in capture capture-window preflight chrome handoff compare-runs cleanup validate-skill check-identity figma-plan figma-upload make-gallery routes verify-site inventory publish-markdown draft-alt figma-export gdocs-manifest setup build-figma-plugin watch; do t "node --check scripts/$f.mjs" node --check "scripts/$f.mjs"; done
 for f in config presets release-sources watch; do t "node --check scripts/lib/$f.mjs" node --check "scripts/lib/$f.mjs"; done
 t "JSON files parse" python3 -c "
 import json,glob
