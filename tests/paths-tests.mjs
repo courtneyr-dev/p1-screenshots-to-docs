@@ -43,7 +43,7 @@ const cli = (cfg, extraArgs = []) => {
   writeFileSync(cfgFile, JSON.stringify(cfg));
   const run = join(TMP, 'run'); mkdirSync(run, { recursive: true });
   writeFileSync(join(run, 'capture-report.json'), '{}'); writeFileSync(join(run, 'figma-plan.json'), '{}');
-  return spawnSync('node', [join(ROOT, 'scripts', 'handoff.mjs'), '--config', cfgFile, '--dir', run, '--release', 'x', ...extraArgs], { encoding: 'utf-8', cwd: TMP });
+  return spawnSync('node', [join(ROOT, 'scripts', 'handoff.mjs'), '--config', cfgFile, '--dir', run, '--release', 'x', '--skip-annotation', 'test-fixture', ...extraArgs], { encoding: 'utf-8', cwd: TMP });
 };
 
 console.log('== paths: canonical resolution and containment');

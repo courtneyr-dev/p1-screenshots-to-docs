@@ -11,6 +11,14 @@ Capture trustworthy screenshots of a web app, put each run in Figma for manual a
 
 Nothing here is tied to one person or project. Each run takes its settings from a config file: for the P1 editor, the P1 base URL, project name, workstream, page, Chrome profile and debugging port, Figma destination and naming, and where the handoff note goes (`references/configuration.md`). The workflow was proven end to end once, on a demo project; the record is in `references/poc-results.md`, and the shape of its config is in `examples/proof-of-concept/`, with placeholders, as an example only.
 
+## Always do, without asking
+
+Every run does all three. Don't ask whether to do them and don't offer to skip them. If a person says to skip one for a run, follow that and write the skip in the handoff note.
+
+1. **Push the run to Figma** (workflow step 6), to the saved `figma.fileKey`. Ask only when no file key is saved, or the saved file isn't the person's or team's agreed review file, because a push adds a page to a shared file.
+2. **Annotate every shot in Figma with the Annotation kit** (workflow step 7): one annotated frame per shot, built from kit instances only (Highlight box, Step badge, Callout label, Redact). Never style marks by hand: no custom colors, boxes, or legends. Read `docs/how-to/annotate.md` and `docs/reference/annotation-kit.md` first. An agent annotates with `use_figma` by default; a person reviews.
+3. **Redact avatars, names, emails, and IDs** on every shot, with the kit's Redact component.
+
 ## What this skill does not do
 
 - It doesn't capture the published site. The page path shown in the editor header is the page being edited, not a route to visit.
@@ -41,7 +49,7 @@ Details and reasons are in `references/safety.md`.
 - Node 18 or later (CI uses 20), npm, and Google Chrome. `bash scripts/setup.sh` checks them and runs `npm ci`. First time here? `references/contributor-setup.md`.
 - A P1 site running at an origin you can reach. A local production build (`next build && next start`) is best for final shots. A hosted origin behind a bot challenge won't work.
 - The P1 MCP, to look up projects, workstreams, pages, and block types.
-- For Figma: the Figma MCP (`use_figma`, `upload_assets`, `get_screenshot`), edit access to a design file, and its file key. Load the `figma:figma-use` skill before the first `use_figma` call. A run uses at least three Figma calls.
+- Figma (always used): the Figma MCP (`use_figma`, `upload_assets`, `get_screenshot`), edit access to a design file, and its file key. Load the `figma:figma-use` skill before the first `use_figma` call. A run uses at least three Figma calls.
 
 ## Workflow
 
@@ -64,7 +72,7 @@ Pass a per-run change with `--set key=value` instead of editing the saved file. 
 3. Which page is being edited? Each shot deep-links to it (`<baseUrl>/p1<pagePath>`); the editor's page selector must show it.
 4. Which block should shots 3 and 4 select? (Optional; without one, those shots are skipped and reported.)
 5. Which Chrome profile directory and debugging port? (Outside every repository; a free port.)
-6. Which Figma file, and how should run IDs and page names look?
+6. Which Figma file, and how should run IDs and page names look? Take these from the saved config; ask only if they are unset. Whether to use Figma is never a question (see "Always do, without asking").
 7. Where does the handoff note go, and in which format?
 8. Which release or change is this for? (It goes in the handoff note.)
 
@@ -128,11 +136,14 @@ For a first delivery or a release-critical refresh, capture a second time (wait 
 
 ### 7. Annotate and hand off
 
-A person annotates in Figma. Then generate the handoff note and fill in its `TO FILL` lines:
+Annotate every shot in Figma with the Annotation kit. This is required and is never offered as a choice: an agent places kit instances with `use_figma` (`docs/how-to/annotate.md`, `docs/reference/annotation-kit.md`), and a person reviews and adjusts. Hand-styled marks are a defect. Record each annotated frame, then generate the handoff note and fill in its `TO FILL` lines:
 
 ```bash
+node scripts/record-annotation.mjs --dir <out>/run1 --slug <shot> --annotated-node-id <id> --kit-only --redacted   # once per shot
 node scripts/handoff.mjs --config p1-editor.config.json --dir <out>/run1 --release "<release or change>"
 ```
+
+`record-annotation.mjs` is an attestation that the marks are kit instances only and personal data is redacted; pass the flags only if that's true. `handoff.mjs` refuses to write the note until every shot is recorded (or has an inventory record with `annotation_status` complete). A person can pass `--skip-annotation "<reason>"` to hand off anyway; the note then says the annotation was skipped.
 
 It writes the note to `docs.handoffDir`. For a refresh, add `--previous <earlier run>` to list what changed (`references/release-refresh.md`). Don't say screenshots reached the P1 docs unless that export was verified (`references/docs-handoff.md`): the Google Docs swap in `references/release-swap.md` replaces images already in a doc; the first insertion and every publish are still manual.
 
@@ -173,6 +184,9 @@ Close the debugging Chrome, then remove the profile and capture folders with `no
 - [ ] Validation shot inspected before the full run.
 - [ ] Six distinct, inspected PNGs from the delivered run (or the skipped ones reported); report shows all captured.
 - [ ] Figma page has one image-filled rectangle per shot, unique names, transparent wrappers.
+- [ ] Every shot has an annotated frame the size of the image, built from Annotation kit instances only, named `[<id>] — <title> — <release> — annotated`, with step layers named `Step N: the <element>`.
+- [ ] Avatars, names, emails, and IDs are redacted in every annotated frame.
+- [ ] Every annotated frame is recorded with `scripts/record-annotation.mjs`, and the handoff note says `Annotation: Complete` (or states why it was skipped).
 - [ ] Duplicate-run re-run rejected; one page per run ID.
 - [ ] Handoff note written; no claim of automated Google Docs export.
 - [ ] Known limitations recorded.

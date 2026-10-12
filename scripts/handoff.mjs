@@ -34,6 +34,7 @@ const { values } = parseArgs({
     inventory: { type: 'string' },
     author: { type: 'string' },
     'approved-page': { type: 'string' },
+    'skip-annotation': { type: 'string' },
     template: { type: 'string' },
     captions: { type: 'string' },
     help: { type: 'boolean', short: 'h' },
@@ -44,7 +45,11 @@ const fail = msg => { console.error(`FAIL: ${msg}`); process.exit(1); };
 
 if (values.help || !values.config || !values.dir?.length || !values.release) {
   console.log(`Usage: node handoff.mjs --config <file> --dir <run folder> [--dir <second run folder>] --release "<name>"
-       [--previous <previous run folder>] [--inventory <inventory file>] [--author "<name>"] [--approved-page "<Figma page name>"] [--template <file>] [--captions <file>]`);
+       [--previous <previous run folder>] [--inventory <inventory file>] [--author "<name>"] [--approved-page "<Figma page name>"] [--template <file>] [--captions <file>]
+       [--skip-annotation "<reason>"]   hand off without annotated frames; the note says so
+
+Every shot needs an annotated frame, recorded with scripts/record-annotation.mjs (or an inventory record
+with annotation_status complete), before a handoff is written.`);
   process.exit(values.help ? 0 : 1);
 }
 
@@ -92,6 +97,7 @@ const fill = t => applyParams(t, params).value;
 
 const rows = [];
 let n = 0;
+const inventoryAnnotated = new Map();
 const cell = s => String(s).replace(/\|/g, '\\|');
 let shotTable;
 let docsMapping = '(no inventory given: pass --inventory to list the exact article, heading, and image slot for each screenshot)';
@@ -108,6 +114,7 @@ if (values.inventory) {
     if (!id) fail(`shot "${slug}" has no screenshotId in the capture report, so it is not an inventory record (inventory gap). Generate the brief with scripts/inventory.mjs brief.`);
     const rec = byId.get(id);
     if (!rec) fail(`${id} was captured but is not in ${inv.file} (inventory gap)`);
+    if (rec.figma?.annotation_status === 'complete' && rec.figma?.annotated_node_id && rec.figma.annotated_node_id !== rec.figma.node_id) inventoryAnnotated.set(slug, rec.figma.annotated_node_id);
     for (const [kind, key] of [['caption', 'caption'], ['alt_text', 'alt_text']]) {
       const t = checkText(kind, rec.content?.[key], id, [...byId.keys()].filter(x => x !== id));
       if (t.errors.length) fail(`${id}: ${t.errors.join('; ')}. The handoff will not fall back to generic text.`);
@@ -135,6 +142,44 @@ if (values.inventory) {
     '| --- | --- | --- | --- | --- |',
     ...rows.map(r => `| ${r.n} | \`${cell(r.rectangle)}\` | ${r.docsSection} | ${cell(r.caption)} | ${cell(r.alt)} |`),
   ].join('\n');
+}
+
+// Annotation gate: every shot needs an annotated frame before a handoff is written. The docs embed the
+// annotated frame, so a handoff without one sends the docs author a bare capture.
+let annotationStatus;
+{
+  const problems = [];
+  const done = [];
+  for (const run of runs) {
+    const recFile = join(run.dir, 'annotation-record.json');
+    const record = existsSync(recFile) ? JSON.parse(readFileSync(recFile, 'utf-8')) : { frames: {} };
+    for (const slug of [...new Set(run.plan.rows.map(r => r.slug))]) {
+      const f = record.frames?.[slug];
+      if (f) {
+        const why = [];
+        if (f.status !== 'complete') why.push('status is not complete');
+        if (!f.annotatedNodeId) why.push('no annotated frame node ID');
+        if (f.cleanNodeId && f.cleanNodeId === f.annotatedNodeId) why.push('the annotated node ID is the clean frame');
+        if (f.kitOnly !== true) why.push('not attested as Annotation kit instances only');
+        if (f.redacted !== true) why.push('not attested as redacted');
+        if (why.length) problems.push(`${run.plan.runId} / ${slug}: ${why.join('; ')}`);
+        else done.push(`${slug} → ${f.annotatedNodeId}`);
+      } else if (inventoryAnnotated.has(slug)) {
+        done.push(`${slug} → ${inventoryAnnotated.get(slug)} (inventory)`);
+      } else {
+        problems.push(`${run.plan.runId} / ${slug}: no annotation recorded`);
+      }
+    }
+  }
+  if (values['skip-annotation'] !== undefined) {
+    if (!values['skip-annotation'].trim()) fail('--skip-annotation needs a reason, for example --skip-annotation "release freeze; annotate after".');
+    process.stderr.write(`  ! Annotation skipped: ${values['skip-annotation']}\n`);
+    annotationStatus = `SKIPPED by request: ${values['skip-annotation']}. The docs must not embed these images until every shot has an annotated frame.${problems.length ? ' Not annotated: ' + problems.map(p => p.split(': ')[0]).join(', ') + '.' : ''}`;
+  } else if (problems.length) {
+    fail(`annotation is required before a handoff, and ${problems.length} shot${problems.length === 1 ? ' is' : 's are'} not ready:\n${problems.map(p => '  - ' + p).join('\n')}\nAnnotate every shot in Figma with the Annotation kit (docs/how-to/annotate.md), then record each one:\n  node scripts/record-annotation.mjs --dir <run folder> --slug <slug> --annotated-node-id <id> --kit-only --redacted\nTo hand off without annotation, pass --skip-annotation "<reason>"; the note will say it was skipped. Nothing was written.`);
+  } else {
+    annotationStatus = `Complete. Every shot has an annotated frame built from Annotation kit instances, with personal data redacted: ${done.join('; ')}.`;
+  }
 }
 
 const skipped = [...new Map(runs.flatMap(r => r.plan.skipped || []).map(s => [s.slug, s])).values()];
@@ -173,6 +218,7 @@ const fields = {
   runIds: runs.map(r => `\`${r.plan.runId}\``).join(', '),
   figmaFileKey: cfg.figma?.fileKey ? `\`${cfg.figma.fileKey}\`` : 'TO FILL',
   figmaPages: runs.map(r => `\`${r.plan.pageName}\``).join('; '),
+  annotationStatus,
   approvedPage: values['approved-page'] ? `\`${values['approved-page']}\`` : 'TO FILL: choose one of the pages above',
   shotTable,
   docsMapping,

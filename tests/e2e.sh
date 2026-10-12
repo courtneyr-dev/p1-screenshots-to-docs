@@ -113,7 +113,7 @@ assert a['release']=='1.0' and b['release']=='1.1'
 PY"
   t "a pattern that uses {release} fails clearly when no --release is given" bash -c "cd '$ROOT' && node scripts/figma-plan.mjs --dir '$E/runA' --config '$E2E_CFG' >'$E/nr.log' 2>&1; [ \$? -eq 1 ] && grep -q -- '--release' '$E/nr.log'"
   t "the generated Figma code for both releases coexists, and the earlier release's page is never touched" bash -c "cd '$ROOT' && node tests/figma-sandbox.mjs '$E/runA' '$E/runB' >'$E/sb.log' 2>&1; cat '$E/sb.log'; grep -q '^ok' '$E/sb.log'"
-  t "the handoff note for release B names the release, the previous run, and the changed shot" bash -c "cd '$ROOT' && node scripts/handoff.mjs --config '$E2E_CFG' --dir '$E/runB' --previous '$E/runA' --release '1.1' >'$E/h.log' 2>&1 && f=\$(ls '$TMP'/e2e-notes/handoff-*.md | head -1) && grep -q '1.1' \"\$f\" && grep -q \"\$(python3 -c \"import json;print(json.load(open('$E/runA/figma-plan.json'))['runId'])\")\" \"\$f\" && grep -q 'publish-menu-open.*CHANGED' \"\$f\" && [ \"\$(grep -c '| unchanged |' \"\$f\")\" = 5 ] && ! grep -q '{{' \"\$f\""
+  t "the handoff note for release B names the release, the previous run, and the changed shot" bash -c "cd '$ROOT' && node scripts/handoff.mjs --skip-annotation test-fixture --config '$E2E_CFG' --dir '$E/runB' --previous '$E/runA' --release '1.1' >'$E/h.log' 2>&1 && f=\$(ls '$TMP'/e2e-notes/handoff-*.md | head -1) && grep -q '1.1' \"\$f\" && grep -q \"\$(python3 -c \"import json;print(json.load(open('$E/runA/figma-plan.json'))['runId'])\")\" \"\$f\" && grep -q 'publish-menu-open.*CHANGED' \"\$f\" && [ \"\$(grep -c '| unchanged |' \"\$f\")\" = 5 ] && ! grep -q '{{' \"\$f\""
 
   echo "== screenshot comparison: noise vs real change (synthetic images)"
 python3 - "$TMP" <<'EOF'
@@ -192,7 +192,7 @@ assert re.fullmatch(r'second-project-editor-\d{4}-\d{8}',p['runId']), p['runId']
 assert p['pageName'].startswith('Second Project · second-workstream · ') and p['pageName'].endswith(' · '+p['runId']), p['pageName']
 assert p['destination']['fileKey']=='ZxZxZxZxZxZxZxZxZxZxZx'
 PY"
-  t "the second project's handoff note is written in its own directory and format (json)" bash -c "cd '$ROOT' && node scripts/handoff.mjs --config '$TMP/second.json' --dir '$E/second' --release 'Second 1.0' >/dev/null 2>&1 && python3 -c \"import json,glob;d=json.load(open(glob.glob('$TMP/second-notes/handoff-*.json')[0]));assert d['release']=='Second 1.0' and d['projectName']=='Second Project' and d['pagePath']=='/docs/guide', d\""
+  t "the second project's handoff note is written in its own directory and format (json)" bash -c "cd '$ROOT' && node scripts/handoff.mjs --skip-annotation test-fixture --config '$TMP/second.json' --dir '$E/second' --release 'Second 1.0' >/dev/null 2>&1 && python3 -c \"import json,glob;d=json.load(open(glob.glob('$TMP/second-notes/handoff-*.json')[0]));assert d['release']=='Second 1.0' and d['projectName']=='Second Project' and d['pagePath']=='/docs/guide', d\""
   t "both Chrome instances ran side by side on their own ports and profiles" bash -c "curl -s http://127.0.0.1:9777/json/version | grep -q Browser && curl -s http://127.0.0.1:9778/json/version | grep -q Browser && [ -d '$TMP/second-profile' ] && [ -d '$E2E_PROFILE' ] && [ '$TMP/second-profile' != '$E2E_PROFILE' ]"
 
   echo "== inventory-driven workflow end to end (fixture editor): brief, capture, record, gallery, Figma plan, handoff"
@@ -261,7 +261,7 @@ d=json.load(open(sys.argv[1])); d['records']=[r for r in d['records'] if r['scre
 json.dump(d,open(sys.argv[2],'w'))
 PY
 rm -f '$E/invrun/figma-manifest.json'; node scripts/figma-plan.mjs --dir '$E/invrun' --config '$E2E_CFG' --release 2026.10 --inventory '$E/inv.gap.json' >'$E/ig.log' 2>&1; [ \$? -eq 1 ] && grep -q 'inventory gap' '$E/ig.log' && [ ! -f '$E/invrun/figma-manifest.json' ]"
-  t "the docs handoff note lists the article, heading, image slot, caption, and alt text from the inventory, unchanged" bash -c "cd '$ROOT' && node scripts/handoff.mjs --config '$E2E_CFG' --dir '$E/invrun' --release 2026.10 --inventory '$INV' --set docs.handoffDir='$E/inv-notes' >'$E/ih.log' 2>&1 && python3 - '$INV' \$(ls '$E'/inv-notes/handoff-*.md) <<'PY'
+  t "the docs handoff note lists the article, heading, image slot, caption, and alt text from the inventory, unchanged" bash -c "cd '$ROOT' && node scripts/handoff.mjs --skip-annotation test-fixture --config '$E2E_CFG' --dir '$E/invrun' --release 2026.10 --inventory '$INV' --set docs.handoffDir='$E/inv-notes' >'$E/ih.log' 2>&1 && python3 - '$INV' \$(ls '$E'/inv-notes/handoff-*.md) <<'PY'
 import sys,json
 recs={r['screenshot_id']:r for r in json.load(open(sys.argv[1]))['records']}; note=open(sys.argv[2]).read()
 for i in ('p1.editor.blocks-browser','p1.editor.workstream-selector'):
@@ -278,8 +278,8 @@ for r in d['records']:
     if r['screenshot_id']=='p1.editor.workstream-selector': r['content']['alt_text']='TO FILL'
 json.dump(d,open(sys.argv[2],'w'))
 PY
-node scripts/handoff.mjs --config '$E2E_CFG' --dir '$E/invrun' --release 2026.10 --inventory '$E/inv.noalt.json' --set docs.handoffDir='$E/inv-notes2' >'$E/ina.log' 2>&1; [ \$? -ne 0 ] && grep -qi 'alt_text\|placeholder' '$E/ina.log' && [ -z \"\$(ls '$E'/inv-notes2/handoff-* 2>/dev/null)\" ]"
-  t "a run without --inventory still hands off with the slug-based suggestions (backward compatible)" bash -c "cd '$ROOT' && node scripts/handoff.mjs --config '$E2E_CFG' --dir '$E/runA' --release 2026.10 --set docs.handoffDir='$E/compat-notes' >/dev/null 2>&1 && grep -q 'Suggested alt text' '$E'/compat-notes/handoff-*.md"
+node scripts/handoff.mjs --skip-annotation test-fixture --config '$E2E_CFG' --dir '$E/invrun' --release 2026.10 --inventory '$E/inv.noalt.json' --set docs.handoffDir='$E/inv-notes2' >'$E/ina.log' 2>&1; [ \$? -ne 0 ] && grep -qi 'alt_text\|placeholder' '$E/ina.log' && [ -z \"\$(ls '$E'/inv-notes2/handoff-* 2>/dev/null)\" ]"
+  t "a run without --inventory still hands off with the slug-based suggestions (backward compatible)" bash -c "cd '$ROOT' && node scripts/handoff.mjs --skip-annotation test-fixture --config '$E2E_CFG' --dir '$E/runA' --release 2026.10 --set docs.handoffDir='$E/compat-notes' >/dev/null 2>&1 && grep -q 'Suggested alt text' '$E'/compat-notes/handoff-*.md"
   t "the release report separates records that need action from inventory gaps using real run comparison" bash -c "cd '$ROOT' && node scripts/inventory.mjs release --inventory '$INV' --release 2026.10 --old '$E/invrun' --new '$E/runA' >'$E/irel.log' 2>&1; [ \$? -eq 2 ] && grep -q 'INVENTORY GAPS' '$E/irel.log' && grep -q 'p1.editor.blocks-browser  REFRESH' '$E/irel.log'"
 fi
 

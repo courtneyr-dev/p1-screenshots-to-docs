@@ -59,7 +59,7 @@ node scripts/figma-upload.mjs --dir <out>/run1 --urls urls.json --only "editor-s
 
 ## Annotating
 
-Annotation is manual. A person annotates on the run's page in Figma. Suggested practice:
+Use the Annotation kit for every mark. The kit components and the `Annotation` variables (Pantheon Design System colors) are in the design file, on the `Annotation kit · Components` page. Don't style marks by hand: place Highlight box, Step badge, Callout label, and Redact instances. Which mark to use, sizes, tones, and the redaction rule: [Annotate with the kit](../docs/how-to/annotate.md) and [Annotation kit](../docs/reference/annotation-kit.md). A person annotates on the run's page in Figma, or an agent does with `use_figma`, placing kit instances only. Suggested practice:
 
 - Annotate in a separate frame named `[screenshot_id] — short title — release — annotated` that holds a copy of the image rectangle only. Don't duplicate the whole clean frame: it also holds the ID label and the HTTP caption, and those would end up in the docs image. Leave the clean frame untouched so the evidence stays intact.
 - When the callouts are done, export the annotated frame as PNG at 2x, record it with `inventory.mjs record-asset --id <id> --file <export.png>`, and set `record-figma --annotation-status complete`.
