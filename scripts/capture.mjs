@@ -262,7 +262,9 @@ const outProbe = (() => {
     if (dirname(d) === d) break;
   }
   if (top && !values['allow-tracked-output']) {
-    const ignored = spawnSync('git', ['-C', top, 'check-ignore', '-q', '--no-index', join(outProbe, 'capture-report.json')]).status === 0;
+    // Probe a PNG path: the screenshots are what must stay out of git. (capture-report.json is ignored by name
+    // everywhere, so probing it passed for any folder.)
+    const ignored = spawnSync('git', ['-C', top, 'check-ignore', '-q', '--no-index', join(outProbe, 'shot.png')]).status === 0;
     if (!ignored) {
       fail(`--out-dir ${outProbe} is inside a git repository (${top}) and isn't git-ignored, so screenshots of a signed-in editor could be committed. Use a directory outside the repository, or an ignored path (for example a screenshots/ folder). Pass --allow-tracked-output only if you are sure.`);
     }

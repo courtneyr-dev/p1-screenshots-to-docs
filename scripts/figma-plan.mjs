@@ -313,7 +313,7 @@ for (const row of DATA.rows) {
     const cell = al('VERTICAL', { name: c.key, itemSpacing: 10 });
     cellsFrame.appendChild(cell);
     let cap = c.side.toUpperCase();
-    if (c.state === 'ok') cap += '  ·  HTTP ' + c.status + (c.moved ? '  ·  redirected' : '');
+    if (c.state === 'ok') cap += (c.status ? '  ·  HTTP ' + c.status : '') + (c.moved ? '  ·  redirected' : '');
     const bad = c.state !== 'ok' || c.status >= 400 || c.moved;
     cell.appendChild(text(cap, 12, 'Semi Bold', bad ? RED : MUTED));
     if (c.state === 'ok') {

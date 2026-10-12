@@ -129,6 +129,38 @@ node scripts/routes.mjs --topic my-site --site https://example.com --sitemap
 
 The preset hides common cookie banners and chat widgets, such as Qualified's docked sales chat on pantheon.io. A site behind a bot challenge fails closed: no PNG is saved.
 
+## Desktop app windows
+
+Use `scripts/capture-window.mjs` for a screen no browser can reach, such as an AI assistant's reply in Claude
+Desktop or Cursor. It runs on macOS only.
+
+1. Set the window up yourself: open the app, run the prompt, and leave the reply on screen. The script never
+   clicks or types in the app.
+2. Find the window, then capture it:
+
+   ```bash
+   node scripts/capture-window.mjs --list --app Claude
+   node scripts/capture-window.mjs --app Claude --front --slug assistant-reply --topic my-doc
+   ```
+
+   ```text
+     assistant-reply                              OK  Claude "Claude"  2990x2146 (2x)
+   Report: screenshots/my-doc/capture-report.json
+   ```
+
+   The shot goes to `screenshots/<topic>/`, which git ignores, at the display's native resolution. It's added
+   to that folder's `capture-report.json`, so [Push a run to Figma](push-to-figma.html) works the same way.
+
+| Option             | Use it when                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `--title "<text>"` | The app has more than one window. Pass part of the title `--list` shows.                                 |
+| `--front`          | The window is behind another app or in another Stage Manager group. Minimized windows can't be captured. |
+| `--size 1440x900`  | Shots must match a set size. Needs Accessibility permission.                                             |
+| `--delay 3`        | You need a few seconds to hover or open a menu first.                                                    |
+
+The app running the command (Terminal, or Claude) needs Screen Recording permission in System Settings >
+Privacy & Security. Before you share the PNG, check it for account names, file paths, and other people's data.
+
 ## Add your own app
 
 Copy the closest preset in `scripts/presets/`, change its sign-in, CSS, and actions, and point a brief's

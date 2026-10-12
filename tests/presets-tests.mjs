@@ -14,6 +14,7 @@ import { randomUUID } from 'node:crypto';
 import { listPresets, loadPreset, withDefaults, signInEnvVars } from '../scripts/lib/presets.mjs';
 import { validateConfig, deriveParams, targetParams, signInModeOf } from '../scripts/lib/config.mjs';
 import { parseSource, sourceUrl, versionFrom, latestVersion } from '../scripts/lib/release-sources.mjs';
+import { pickWindow, mergeReport, parseSize } from '../scripts/capture-window.mjs';
 
 const ROOT = resolve(dirname(new URL(import.meta.url).pathname), '..');
 const TMP = realpathSync(mkdtempSync(join(tmpdir(), 'presets-test-')));
@@ -175,6 +176,36 @@ for (const [preset, extra, env] of [
     assert.doesNotMatch(r.stdout, /"p"|password/i);
   });
 }
+
+await test('capture refuses an output folder that git tracks, even when capture-report.json is ignored by name', () => {
+  const repo = join(TMP, 'tracked-repo');
+  mkdirSync(repo, { recursive: true });
+  spawnSync('git', ['init', '-q', repo]);
+  writeFileSync(join(repo, '.gitignore'), 'capture-report.json\n');
+  const cfg = join(TMP, 'tracked-public.json');
+  writeFileSync(cfg, JSON.stringify({ topic: 'qa-tracked', preset: 'public-site', baseUrl: 'http://localhost:9' }));
+  const r = spawnSync(process.execPath, [join(ROOT, 'scripts/capture.mjs'), '--config', cfg, '--brief', join(ROOT, 'briefs/public-site.json'), '--out-dir', join(repo, 'shots')], { encoding: 'utf-8' });
+  assert.equal(r.status, 1, r.stdout + r.stderr); assert.match(r.stderr, /isn't git-ignored/);
+});
+
+// ---------- desktop windows ----------
+await test('capture-window picks exactly one window, skips thumbnails, and says why when it cannot', () => {
+  const wins = [{ id: 1, app: 'Claude', title: 'Claude', w: 1495, h: 1073 }, { id: 2, app: 'Claude', title: 'App Icon', w: 64, h: 64 }, { id: 3, app: 'Cursor', title: 'a.md — repo', w: 1400, h: 900 }, { id: 4, app: 'Cursor', title: 'b.md — repo', w: 1400, h: 900 }];
+  assert.equal(pickWindow(wins, { app: 'claude' }).window.id, 1);
+  assert.match(pickWindow(wins, { app: 'Cursor' }).error, /2 windows.*--title/);
+  assert.equal(pickWindow(wins, { app: 'Cursor', title: 'b.md' }).window.id, 4);
+  assert.match(pickWindow(wins, { app: 'Cursor', title: 'zzz' }).error, /no window whose title contains/);
+  assert.match(pickWindow(wins, { app: 'Word' }).error, /no window on screen for "Word".*Claude, Cursor/);
+});
+
+await test('capture-window writes the same report format as capture.mjs, replacing a re-captured slug', () => {
+  const a = mergeReport(null, { topic: 't', app: 'Claude', slug: 'reply', file: '/x/reply.png', dpr: 2, capturedAt: '2026-10-12T00:00:00Z' });
+  assert.equal(a.results[0].url, 'app://Claude/'); assert.equal(a.results[0].side, 'next'); assert.equal(a.results[0].ok, true);
+  assert.equal(new URL(a.results[0].finalUrl).pathname, '/');
+  const b = mergeReport(a, { topic: 't', app: 'Claude', slug: 'reply', file: '/x/reply.png', dpr: 2, capturedAt: '2026-10-12T00:01:00Z' });
+  assert.equal(b.results.length, 1);
+  assert.deepEqual(parseSize('1440x900'), { w: 1440, h: 900 }); assert.equal(parseSize('big'), null);
+});
 
 // ---------- release sources ----------
 await test('release sources parse, and anything else is refused', () => {

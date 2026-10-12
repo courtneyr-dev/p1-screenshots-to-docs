@@ -51,7 +51,13 @@ Which screenshots to capture is decided by `inventory/screenshots.json`, not by 
 
 ### 1. Choose the values and write the config
 
-Ask, then confirm with the P1 MCP (`list_sites`, `list_branches`, `list_documents`, `get_document`):
+Look for a saved config first: `<preset>.config.json` in the repository folder (for P1, `p1-editor.config.json`; these files are git-ignored). Run `preflight.mjs` on it (below). When it passes, don't ask again for values it already holds (base URL, project, Chrome profile and port, Figma file, handoff folder). Ask only what changes per run, in one message:
+
+- Which release or change is this for, and which screenshots does the doc need?
+- For P1: which workstream and page, if not the saved ones?
+- Does any shot show a desktop app (Claude Desktop, Cursor, VS Code) instead of a web page? Capture those with `scripts/capture-window.mjs` (see "Desktop app windows" below).
+
+Pass a per-run change with `--set key=value` instead of editing the saved file. With no saved config, ask the full list and write one. Ask, then confirm with the P1 MCP (`list_sites`, `list_branches`, `list_documents`, `get_document`):
 
 1. Which P1 base URL? If it isn't running, the person starts it in their own terminal.
 2. Which project and workstream should the screenshots show? Choose them for this run.
@@ -129,6 +135,17 @@ node scripts/handoff.mjs --config p1-editor.config.json --dir <out>/run1 --relea
 ```
 
 It writes the note to `docs.handoffDir`. For a refresh, add `--previous <earlier run>` to list what changed (`references/release-refresh.md`). Don't say screenshots reached the P1 docs unless that export was verified (`references/docs-handoff.md`): the Google Docs swap in `references/release-swap.md` replaces images already in a doc; the first insertion and every publish are still manual.
+
+### Desktop app windows
+
+A browser preset can't reach a desktop app's window, such as an AI assistant's reply in Claude Desktop or Cursor. The person sets the window up (opens the app, runs the prompt, leaves the reply on screen), then:
+
+```bash
+node scripts/capture-window.mjs --list --app Claude
+node scripts/capture-window.mjs --app Claude --front --slug assistant-reply --topic <topic> [--title "<window title text>"] [--size 1440x900]
+```
+
+It captures only that window, at native resolution, into `screenshots/<topic>/` and adds the shot to that folder's `capture-report.json`, so `figma-plan.mjs` and the rest work unchanged. It needs macOS and Screen Recording permission for the app running the command; `--size` also needs Accessibility permission. The window must be on screen (not minimized, and in the current Stage Manager group); `--front` brings the app forward. It never clicks or types in the app. Check the PNG for account names, file paths, and other people's data before it goes anywhere.
 
 ### 8. Clean up
 
