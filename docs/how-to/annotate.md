@@ -10,6 +10,33 @@ Add numbered marks, highlights, and redactions to each screenshot in an annotate
 
 {% include video.html name="05-annotate" title="Annotating with the kit" poster="kit-assets-panel.jpg" %}
 
+## Check the kit first
+
+An older kit has the wrong colors and nothing flags it until an extraction comes back wrong. Check the file before
+you annotate or extract in it:
+
+1. Write the check and run it with `use_figma` in the review file. It only reads:
+
+   ```bash
+   node scripts/figma-kit-check.mjs --out kit-check.js
+   ```
+
+2. Save what it returns as JSON and verify it against `figma-plugin/annotation-tokens.json`:
+
+   ```bash
+   node scripts/figma-kit-check.mjs --result kit-check-result.json
+   node scripts/preflight.mjs --config p1-editor.config.json --need figma --kit-result kit-check-result.json
+   ```
+
+   Preflight can't call Figma, so without `--kit-result` it prints these steps instead of passing the kit.
+
+It exits 1 with a plain fix. Missing or different stamps (the file root's `tokensSchema` and `tokensHash`, and each
+of the 13 components' `kit` stamp): run Plugins > Development > Screenshot annotation kit in this file. Variables
+that don't hold the contract's values, or alias anything but the `brand/*` variables in `Annotation primitives`:
+repoint them to the brand primitives, or delete the old Annotation collection and re-run the plugin. Fix the
+variables first. The plugin reuses variables that already exist, so re-running it alone stamps the file and keeps
+the old colors.
+
 ## Steps
 
 1. Make the annotated frame beside the clean one: a frame the size of the image, holding a copy of the image

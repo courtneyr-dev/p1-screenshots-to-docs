@@ -136,7 +136,7 @@ For a first delivery or a release-critical refresh, capture a second time (wait 
 
 ### 7. Annotate and hand off
 
-Annotate every shot in Figma with the Annotation kit. This is required and is never offered as a choice: an agent places kit instances with `use_figma` (`docs/how-to/annotate.md`, `docs/reference/annotation-kit.md`), and a person reviews and adjusts. Hand-styled marks are a defect. Record each annotated frame, then generate the handoff note and fill in its `TO FILL` lines:
+Annotate every shot in Figma with the Annotation kit. This is required and is never offered as a choice: an agent places kit instances with `use_figma` (`docs/how-to/annotate.md`, `docs/reference/annotation-kit.md`), and a person reviews and adjusts. Hand-styled marks are a defect. Before extracting from or annotating in a Figma file you haven't checked this session, run the kit check (`scripts/figma-kit-check.mjs`, `docs/how-to/annotate.md`): an older kit has the wrong colors and nothing else flags it. Record each annotated frame, then generate the handoff note and fill in its `TO FILL` lines:
 
 ```bash
 node scripts/record-annotation.mjs --dir <out>/run1 --slug <shot> --annotated-node-id <id> --kit-only --redacted   # once per shot
@@ -171,7 +171,8 @@ Close the debugging Chrome, then remove the profile and capture folders with `no
 - The planner refuses a report whose "captured" shots have a missing or corrupt PNG, or no usable shots.
 - The generated Figma code throws `Page already exists: <name>` before creating anything when the run ID is already in the file.
 - Inventory records are validated for source, destination, capture state, alt text, and secrets; a missing alt text or an uncovered shot stops the handoff.
-- Block shots prove the block instance (selected overlay matches the block, panel names its type) and fail on a neighbor.
+- Block shots prove the block instance (selected overlay matches the block, panel names its type or the overlay's label) and fail on a neighbor.
+- A shot that shows a config `forbiddenNames` entry fails and saves no PNG; with `--final` (or `final: true`) a shot with the Next.js dev overlay fails too (`references/configuration.md`).
 - `compare-runs.mjs` compares two runs and ignores isolated pixel noise; `cleanup.mjs` and the `--out-dir` guard keep captures and profiles out of commits.
 - `npm test` runs the regression and portability suite against local fixtures, with mutation checks. It needs Chrome but no P1, Figma, or Google access. `node scripts/validate-skill.mjs` checks this file; `node scripts/check-identity.mjs` checks commit and file emails. CI runs all three on changes to this folder.
 

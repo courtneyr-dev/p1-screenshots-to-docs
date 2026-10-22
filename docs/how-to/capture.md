@@ -28,11 +28,19 @@ public site, the steps are the same with that app's preset: [Capture WordPress, 
    In that window, sign in to P1, choose the workstream in the editor, and wait until the Blocks panel,
    canvas, and page settings are on screen. The tool never signs in for you or sees your credentials.
 
+   At a viewport of about 1100 px or less, use `editorReadyKeepPanel` in place of `editorReady` in the brief's
+   shots. `editorReady` opens the left panel, which shrinks the canvas, and the block click then selects nothing.
+   See [presets](../reference/presets.html#p1-editor).
+
 3. Take one validation shot and look at it:
 
    ```bash
    node scripts/capture.mjs --brief brief.json --config p1-editor.config.json --only <id> --out-dir <out>/validate
    ```
+
+   Before a capture whose images will ship, add `"forbiddenNames": ["<a name that must not appear>"]` and
+   `"final": true` to the config (or pass `--final`). A shot that shows a forbidden name, or the Next.js dev overlay,
+   fails and saves no PNG. See [configuration](../reference/configuration.html#keep-a-name-and-the-dev-overlay-out-of-shots).
 
 4. Capture the full set, then record it in the inventory:
 
