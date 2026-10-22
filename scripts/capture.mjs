@@ -93,6 +93,7 @@ const { values } = parseArgs({
     set:        { type: 'string', multiple: true },
     'dry-run':  { type: 'boolean' },
     'allow-tracked-output': { type: 'boolean' },
+    final:      { type: 'boolean' },
     help:       { type: 'boolean' },
   },
   strict: false,
@@ -112,6 +113,8 @@ Options:
   --set key=value       Override one config value (dotted keys, for example chrome.cdpPort=9333)
   --dry-run             Validate and print the resolved shots, then exit. Opens no browser.
   --allow-tracked-output  Allow --out-dir inside a git repository where it is not git-ignored (not recommended).
+  --final               A run whose images will ship: fail any shot that shows the Next.js dev overlay
+                        (devMode). Same as "final": true in the config.
   --connect <url>       Attach to a Chrome you started with --remote-debugging-port and signed in to
                         (http://127.0.0.1:<port>; defaults to the config's chrome.cdpPort). The harness
                         never launches a browser, handles credentials, or stores a session; it opens
@@ -152,6 +155,11 @@ if (values.config) {
 } else if (values.set?.length) {
   fail('--set needs --config');
 }
+
+// Names that must never appear in a shot (config `forbiddenNames`), and whether this run's images will ship
+// (`--final` or config `final: true`).
+const FORBIDDEN = (cfg?.forbiddenNames || []).map(n => String(n).replace(/\s+/g, ' ').trim().toLowerCase()).filter(Boolean);
+const FINAL_RUN = !!(values.final || cfg?.final === true);
 
 // A shot can list `requires` (all must be set) or `requiresAny` (one must be set), for example
 // ["blockType"]. Without the value the shot is skipped and reported, not failed. A brief can hold
@@ -243,6 +251,7 @@ if (values['dry-run']) {
   console.log(JSON.stringify({
     topic: brief.topic, site: SITE, preset: presets.names.join(', ') || null, signIn: signInMode, connect: values.connect || null, project: params.projectName || null,
     workstream: params.workstream || null, pagePath: params.pagePath || null,
+    final: FINAL_RUN, forbiddenNames: FORBIDDEN.length,
     shots: shots.map(s => ({ slug: s.slug, url: s.url, steps: s.steps, expect: s.expect, expectAfter: s.expectAfter })),
     skipped,
   }, null, 2));
@@ -394,7 +403,9 @@ async function detectBlock(page, res, status, finalUrl) {
 //      Puck's data-puck-component id);
 //   2. exactly one selection overlay (data-puck-overlay with an "--isSelected" modifier class) exists in
 //      the preview frame, and its box matches the target block's box within `tolerance` px;
-//   3. the properties panel (`panel`, default "main") names the block's type, read from the id's prefix.
+//   3. the properties panel (`panel`, default "main") names the block's type, read from the id's prefix, or
+//      its label: the first text in the selected overlay's toolbar. The editor shows the component label
+//      ("Notice") where the id prefix holds the type ("NoticeBlock"), so either one proves the block.
 // A neighbor, even one of the same type, fails step 2. If the editor stops marking the overlay this way,
 // the check fails closed instead of passing.
 async function requireSelectedBlock(page, spec, fail) {
@@ -414,14 +425,19 @@ async function requireSelectedBlock(page, spec, fail) {
     const a = block.getBoundingClientRect();
     const b = overlays[0].getBoundingClientRect();
     const off = Math.max(Math.abs(a.left - b.left), Math.abs(a.top - b.top), Math.abs(a.width - b.width), Math.abs(a.height - b.height));
-    return { id, off: Math.round(off), ok: off <= tol };
+    // The label is the first non-blank text inside the selected overlay (its toolbar).
+    const walker = document.createTreeWalker(overlays[0], NodeFilter.SHOW_TEXT);
+    let label = '';
+    for (let n = walker.nextNode(); n && !label; n = walker.nextNode()) label = (n.textContent || '').replace(/\s+/g, ' ').trim();
+    return { id, label, off: Math.round(off), ok: off <= tol };
   }, target, tolerance);
   if (probe.error) throw await fail(`block selection not proven: ${probe.error}`);
   if (!probe.ok) throw await fail(`a different block is selected: the selected overlay is ${probe.off}px away from the intended block (${probe.id})`);
   const type = probe.id.replace(/-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, '');
   if (!type || type === probe.id) throw await fail(`block id "${probe.id}" has no type prefix to check in the properties panel`);
   const text = await page.$eval(panel, el => (el.innerText || '').replace(/\s+/g, ' ')).catch(() => '');
-  if (!text.toLowerCase().includes(type.toLowerCase())) throw await fail(`the properties panel doesn't name the selected block type "${type}"`);
+  const names = [type, probe.label].filter(Boolean);
+  if (!names.some(n => text.toLowerCase().includes(n.toLowerCase()))) throw await fail(`the properties panel names neither the selected block's type "${type}" nor its label${probe.label ? ` "${probe.label}"` : ' (the selected overlay shows none)'}`);
 }
 
 // Fail closed: a shot that lists checks in `expect` (before actions) or `expectAfter` (after
@@ -650,6 +666,27 @@ async function captureOne(page, spec, base, file) {
   }
 }
 
+// Fails the shot when the page shows a forbidden name: the editor header's site label, the page text, or the
+// text of a same-origin frame (the preview canvas). Case-insensitive. The name isn't printed, so a log or a
+// report can't carry it.
+async function requireNoForbiddenNames(page) {
+  if (!FORBIDDEN.length) return;
+  const seen = await page.evaluate(() => {
+    const norm = s => (s || '').replace(/\s+/g, ' ').toLowerCase();
+    const frames = (doc, depth) => [...doc.querySelectorAll('iframe')].flatMap(f => {
+      try { const d = f.contentDocument; return d ? [norm(d.body?.innerText), ...(depth < 3 ? frames(d, depth + 1) : [])] : []; } catch { return []; }
+    });
+    return { label: norm(document.querySelector('[data-testid=site-label]')?.innerText), page: norm(document.body?.innerText), frames: frames(document, 0) };
+  });
+  FORBIDDEN.forEach((name, i) => {
+    const where = seen.label.includes(name) ? "the editor header's site label" : seen.page.includes(name) ? 'the page text' : seen.frames.some(t => t.includes(name)) ? 'the text of a frame on the page' : null;
+    if (!where) return;
+    const e = new Error(`forbiddenNames[${i}] appears in ${where}. This shot would show a name that must not ship, so nothing was saved. (The name isn't printed here.)`);
+    e.blocked = 'forbidden-name';
+    throw e;
+  });
+}
+
 // The rest of a shot, on the page the steps ended on (a window a step opened, or the original page).
 async function finishShot(page, spec, file, info) {
   if (spec.scrollTo) {
@@ -664,6 +701,15 @@ async function finishShot(page, spec, file, info) {
   const delay = spec.delay ?? 800;
   if (delay > 0) await new Promise(r => setTimeout(r, delay));
   await requireSelectors(page, spec.expectAfter, 'expectAfter');
+  await requireNoForbiddenNames(page);
+  if (FINAL_RUN) {
+    const dev = info.devMode || await page.evaluate(() => !!document.querySelector('nextjs-portal')).catch(() => false);
+    if (dev) {
+      const e = new Error('final run: the Next.js dev overlay (devMode) is present, so the shot would show its badge. Capture against `next build && next start`, or drop --final for a draft.');
+      e.blocked = 'dev-mode';
+      throw e;
+    }
+  }
 
   await page.screenshot({ path: file, type: 'png', fullPage: !!spec.fullPage });
   return info;
@@ -749,6 +795,7 @@ async function main() {
     topic: brief.topic, site: SITE, baseline: BASELINE || null, target, preset: presets.names.join(', ') || null, signIn: signInMode,
     projectName: params.projectName || null, workstream: params.workstream || null, pagePath: params.pagePath || null,
     skipped,
+    ...(FINAL_RUN && { final: true }),
     ...(brief.inventory && { inventory: brief.inventory }),
     capturedAt: new Date().toISOString(), results,
   }, null, 2));

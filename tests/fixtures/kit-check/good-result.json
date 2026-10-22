@@ -1,0 +1,326 @@
+{
+  "$comment": "$KIT_HASH stands for the hash of annotation-tokens.json in this folder. The tests substitute it, so no 64-character hex string sits in the repository (secret scanners flag one under a key named tokensHash).",
+  "schema": "screenshots-to-docs/kit-check@1",
+  "root": {
+    "tokensSchema": "1",
+    "tokensHash": "$KIT_HASH"
+  },
+  "components": [
+    {
+      "name": "Step badge",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Callout label",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Highlight box",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Arrow",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Key cap",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Redact",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Dim overlay",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Click indicator",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Note box",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Do / Dont marker",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Highlight ellipse",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Underline",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    },
+    {
+      "name": "Cursor",
+      "found": 1,
+      "kits": [
+        "$KIT_HASH"
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/yellow",
+      "type": "COLOR",
+      "value": "#FFDC28",
+      "alias": []
+    },
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/white",
+      "type": "COLOR",
+      "value": "#FFFFFF",
+      "alias": []
+    },
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/purple",
+      "type": "COLOR",
+      "value": "#3017A1",
+      "alias": []
+    },
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/black",
+      "type": "COLOR",
+      "value": "#23232D",
+      "alias": []
+    },
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/pink",
+      "type": "COLOR",
+      "value": "#DE0093",
+      "alias": []
+    },
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/green",
+      "type": "COLOR",
+      "value": "#218C5F",
+      "alias": []
+    },
+    {
+      "collection": "Annotation primitives",
+      "name": "brand/blue",
+      "type": "COLOR",
+      "value": "#0F62FE",
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/mark",
+      "type": "COLOR",
+      "value": "#3017A1",
+      "alias": [
+        "Annotation primitives/brand/purple"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/halo",
+      "type": "COLOR",
+      "value": "#FFFFFF",
+      "alias": [
+        "Annotation primitives/brand/white"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/on-mark",
+      "type": "COLOR",
+      "value": "#FFFFFF",
+      "alias": [
+        "Annotation primitives/brand/white"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/mark-gold",
+      "type": "COLOR",
+      "value": "#FFDC28",
+      "alias": [
+        "Annotation primitives/brand/yellow"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/on-gold",
+      "type": "COLOR",
+      "value": "#3017A1",
+      "alias": [
+        "Annotation primitives/brand/purple"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/ink",
+      "type": "COLOR",
+      "value": "#23232D",
+      "alias": [
+        "Annotation primitives/brand/black"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/info",
+      "type": "COLOR",
+      "value": "#0F62FE",
+      "alias": [
+        "Annotation primitives/brand/blue"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/do",
+      "type": "COLOR",
+      "value": "#218C5F",
+      "alias": [
+        "Annotation primitives/brand/green"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/dont",
+      "type": "COLOR",
+      "value": "#DE0093",
+      "alias": [
+        "Annotation primitives/brand/pink"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/redact",
+      "type": "COLOR",
+      "value": "#23232D",
+      "alias": [
+        "Annotation primitives/brand/black"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/stroke",
+      "type": "FLOAT",
+      "value": 6,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/halo-line",
+      "type": "FLOAT",
+      "value": 12,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/halo",
+      "type": "FLOAT",
+      "value": 3,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/badge",
+      "type": "FLOAT",
+      "value": 48,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/badge-s",
+      "type": "FLOAT",
+      "value": 32,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/badge-l",
+      "type": "FLOAT",
+      "value": 64,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/stroke-thin",
+      "type": "FLOAT",
+      "value": 4,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/halo-line-thin",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "radius/label",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "radius/highlight",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "spacing/label-x",
+      "type": "FLOAT",
+      "value": 16,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "spacing/label-y",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "description": "Actions for the P1 editor (the /p1 route by default). Selectors come from the editor's data-testid attributes and from Puck's data-puck-component attribute on canvas blocks, which holds the same props.id the P1 MCP returns from get_document. Values such as the project, page, workstream, and block type are parameters: the brief passes them in, and they come from the per-run config file. Re-check the selectors after a P1 editor upgrade. editorReady also restores the left panel, because the editor keeps panel state across page loads in the same browser. The block-selection actions end with a selectedBlock check: exactly one selected overlay, matching the intended block's box, and the properties panel naming its type. A neighboring block fails it.",
+  "description": "Actions for the P1 editor (the /p1 route by default). Selectors come from the editor's data-testid attributes and from Puck's data-puck-component attribute on canvas blocks, which holds the same props.id the P1 MCP returns from get_document. Values such as the project, page, workstream, and block type are parameters: the brief passes them in, and they come from the per-run config file. Re-check the selectors after a P1 editor upgrade. editorReady also restores the left panel, because the editor keeps panel state across page loads in the same browser. At a viewport of about 1100 px or less, use editorReadyKeepPanel instead: it runs the same checks and never toggles the left panel, because restoring the panel there opens the Blocks drawer, shrinks the canvas to about 370 px, and the later block click selects nothing. The block-selection actions end with a selectedBlock check: exactly one selected overlay, matching the intended block's box, and the properties panel naming its type or the component label the selected overlay's toolbar shows. A neighboring block fails it.",
   "signIn": {
     "mode": "chrome"
   },
@@ -99,6 +99,33 @@
       ],
       "expectAfter": []
     },
+    "editorReadyKeepPanel": {
+      "params": [
+        "projectName",
+        "pageLabel"
+      ],
+      "steps": [
+        {
+          "wait": 600
+        }
+      ],
+      "expect": [
+        "[data-testid=p1-editor-header]",
+        {
+          "selector": "[data-testid=site-label]",
+          "text": "{projectName}"
+        },
+        {
+          "selector": "[data-testid=page-selector]",
+          "text": "{pageLabel}"
+        },
+        "[data-testid=workstream-trigger]",
+        "#preview-frame",
+        "[data-testid=inspector-collapse-button]"
+      ],
+      "expectAfter": [],
+      "description": "Same checks as editorReady, but never toggles the left panel. Use it at a viewport of about 1100 px or less, where opening the Blocks drawer shrinks the canvas and the later block click selects nothing, and for any shot that needs the panel collapsed. The panel stays in whatever state the editor loaded it in, so a shot that needs it open or closed must say so (collapseLeftPanel closes it)."
+    },
     "selectWorkstream": {
       "params": [
         "name"
@@ -175,6 +202,10 @@
           "click": "button[id^=p1-cat-btn-]",
           "text": "{name}",
           "skipIf": "[aria-expanded=true]"
+        },
+        {
+          "scroll": "button[id^=p1-cat-btn-]",
+          "text": "{name}"
         },
         {
           "wait": 500

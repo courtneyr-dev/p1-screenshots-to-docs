@@ -1,0 +1,292 @@
+{
+  "schema": "screenshots-to-docs/kit-check@1",
+  "root": {
+    "tokensSchema": "",
+    "tokensHash": ""
+  },
+  "components": [
+    {
+      "name": "Step badge",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Callout label",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Highlight box",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Arrow",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Key cap",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Redact",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Dim overlay",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Click indicator",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Note box",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Do / Dont marker",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Highlight ellipse",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Underline",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    },
+    {
+      "name": "Cursor",
+      "found": 1,
+      "kits": [
+        null
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "collection": "Annotation primitives",
+      "name": "white",
+      "type": "COLOR",
+      "value": "#FFFFFF",
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/mark",
+      "type": "COLOR",
+      "value": "#7952A8",
+      "alias": [
+        "(library)/primitive/discovery/600"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/halo",
+      "type": "COLOR",
+      "value": "#FFFFFF",
+      "alias": [
+        "Annotation primitives/white"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/on-mark",
+      "type": "COLOR",
+      "value": "#FFFFFF",
+      "alias": [
+        "Annotation primitives/white"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/stroke",
+      "type": "FLOAT",
+      "value": 6,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/halo-line",
+      "type": "FLOAT",
+      "value": 12,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/halo",
+      "type": "FLOAT",
+      "value": 3,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/badge",
+      "type": "FLOAT",
+      "value": 48,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "radius/label",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "radius/highlight",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "spacing/label-x",
+      "type": "FLOAT",
+      "value": 16,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "spacing/label-y",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/mark-gold",
+      "type": "COLOR",
+      "value": "#FFCA28",
+      "alias": [
+        "(library)/primitive/brand/500"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/info",
+      "type": "COLOR",
+      "value": "#207DDE",
+      "alias": [
+        "(library)/primitive/info/600"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/do",
+      "type": "COLOR",
+      "value": "#3C6C0F",
+      "alias": [
+        "(library)/primitive/success/700"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/dont",
+      "type": "COLOR",
+      "value": "#BE3232",
+      "alias": [
+        "(library)/primitive/critical/600"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/caution",
+      "type": "COLOR",
+      "value": "#B15C16",
+      "alias": [
+        "(library)/primitive/warning/700"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/ink",
+      "type": "COLOR",
+      "value": "#4A4844",
+      "alias": [
+        "(library)/primitive/warm/900"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/neutral",
+      "type": "COLOR",
+      "value": "#9C9890",
+      "alias": [
+        "(library)/primitive/warm/600"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "color/on-gold",
+      "type": "COLOR",
+      "value": "#4A4844",
+      "alias": [
+        "(library)/primitive/warm/900"
+      ]
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/badge-s",
+      "type": "FLOAT",
+      "value": 32,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/badge-l",
+      "type": "FLOAT",
+      "value": 64,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/stroke-thin",
+      "type": "FLOAT",
+      "value": 4,
+      "alias": []
+    },
+    {
+      "collection": "Annotation",
+      "name": "size/halo-line-thin",
+      "type": "FLOAT",
+      "value": 8,
+      "alias": []
+    }
+  ]
+}
