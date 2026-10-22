@@ -10,6 +10,11 @@
  *   node preflight.mjs --config p1-editor.config.json
  *   node preflight.mjs --config p1-editor.config.json --need capture,figma,handoff
  *   node preflight.mjs --config p1-editor.config.json --brief briefs/p1-editor.json --check-chrome
+ *   node preflight.mjs --config p1-editor.config.json --need figma --kit-result kit-check-result.json
+ *
+ * The figma stage also needs the Annotation kit in the Figma file to match the token contract. Preflight can't
+ * call Figma, so without --kit-result it prints the next step; with --kit-result it verifies a saved result of
+ * scripts/figma-kit-check.mjs and exits 1 on a mismatch.
  *
  * Exit code: 0 when everything required is present, 1 otherwise.
  */
@@ -18,6 +23,7 @@ import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { resolve } from 'node:path';
 import { loadConfig, applyOverrides, validateConfig, formatValidation, deriveParams, applyParams } from './lib/config.mjs';
+import { checkResultFile, formatKitReport, TOKENS_FILE } from './figma-kit-check.mjs';
 
 const { values } = parseArgs({
   options: {
@@ -26,6 +32,8 @@ const { values } = parseArgs({
     brief: { type: 'string' },
     set: { type: 'string', multiple: true },
     'check-chrome': { type: 'boolean' },
+    'kit-result': { type: 'string' },
+    'kit-tokens': { type: 'string' },
     help: { type: 'boolean', short: 'h' },
   },
 });
@@ -35,7 +43,9 @@ if (values.help || !values.config) {
 
 --need      Which parts of the workflow this run uses (default: capture,figma,handoff; Figma and the handoff are part of every run).
 --brief     Also check that every {{placeholder}} in the brief has a value, and list shots that will be skipped.
---check-chrome  Ask the Chrome debugging endpoint whether it is running (one HTTP request; opens no browser).`);
+--check-chrome  Ask the Chrome debugging endpoint whether it is running (one HTTP request; opens no browser).
+--kit-result    Verify a saved result of scripts/figma-kit-check.mjs against the Annotation token contract.
+--kit-tokens    Use another token contract file (default figma-plugin/annotation-tokens.json).`);
   process.exit(values.help ? 0 : 1);
 }
 
@@ -85,6 +95,22 @@ if (values.brief) {
     ok = false;
     lines.push(`Brief ${values.brief} could not be read: ${e.message}`);
   }
+}
+
+if (values['kit-result']) {
+  try {
+    const kit = checkResultFile(values['kit-result'], { tokensFile: values['kit-tokens'] || TOKENS_FILE });
+    lines.push(formatKitReport(kit));
+    if (!kit.ok) ok = false;
+  } catch (e) {
+    ok = false;
+    lines.push(`Kit check could not run: ${e.message}`);
+  }
+} else if (stages.includes('figma')) {
+  lines.push(`  ! Kit check not done: preflight can't call Figma, and a kit built from an older plugin gives wrong colors. Next:
+      node scripts/figma-kit-check.mjs --out kit-check.js
+    Run that file with use_figma in the review file (it only reads), save the JSON it returns, then:
+      node scripts/preflight.mjs --config ${values.config} --need figma --kit-result <saved file>`);
 }
 
 if (values['check-chrome'] && result.errors.every(e => !e.key.startsWith('chrome.'))) {

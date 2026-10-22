@@ -37,7 +37,7 @@ cd "$SKILL" || exit 1
 [ -d node_modules ] || { echo "Run: bash scripts/setup.sh (in $SKILL)"; exit 1; }
 
 echo "== static"
-for f in capture capture-window preflight chrome handoff record-annotation compare-runs cleanup validate-skill check-identity figma-plan figma-upload make-gallery routes verify-site inventory publish-markdown draft-alt figma-export gdocs-manifest setup build-figma-plugin watch; do t "node --check scripts/$f.mjs" node --check "scripts/$f.mjs"; done
+for f in capture capture-window preflight chrome handoff record-annotation compare-runs cleanup validate-skill check-identity figma-plan figma-upload make-gallery routes verify-site inventory publish-markdown draft-alt figma-export gdocs-manifest setup build-figma-plugin watch figma-kit-check export-frame; do t "node --check scripts/$f.mjs" node --check "scripts/$f.mjs"; done
 for f in config presets release-sources watch; do t "node --check scripts/lib/$f.mjs" node --check "scripts/lib/$f.mjs"; done
 t "JSON files parse" python3 -c "
 import json,glob
@@ -343,6 +343,22 @@ pm_pass=$(grep -c '^PASS  ' "$TMP/publish-markdown-tests.log"); pm_fail=$(grep -
 echo "      publish-markdown tests: $pm_pass passed, $pm_fail failed (names: node tests/publish-markdown-tests.mjs)"
 pass=$((pass + pm_pass)); fail=$((fail + pm_fail))
 [ "$pm_pass" -gt 0 ] || { echo "FAIL  the publish-markdown tests did not run"; fail=$((fail + 1)); }
+
+echo "== Figma kit check: stamps and variables against the token contract (no Figma access)"
+node tests/kit-check-tests.mjs >"$TMP/kit-check-tests.log" 2>&1
+grep -E '^(FAIL)  |^        ' "$TMP/kit-check-tests.log" | head -40
+kc_pass=$(grep -c '^PASS  ' "$TMP/kit-check-tests.log"); kc_fail=$(grep -c '^FAIL  ' "$TMP/kit-check-tests.log")
+echo "      kit-check tests: $kc_pass passed, $kc_fail failed (names: node tests/kit-check-tests.mjs)"
+pass=$((pass + kc_pass)); fail=$((fail + kc_fail))
+[ "$kc_pass" -gt 0 ] || { echo "FAIL  the kit-check tests did not run"; fail=$((fail + 1)); }
+
+echo "== Frame export: tiles past the 1024 px cap, stitching, cleanup (no Figma access)"
+node tests/export-frame-tests.mjs >"$TMP/export-frame-tests.log" 2>&1
+grep -E '^(FAIL)  |^        ' "$TMP/export-frame-tests.log" | head -40
+ef_pass=$(grep -c '^PASS  ' "$TMP/export-frame-tests.log"); ef_fail=$(grep -c '^FAIL  ' "$TMP/export-frame-tests.log")
+echo "      export-frame tests: $ef_pass passed, $ef_fail failed (names: node tests/export-frame-tests.mjs)"
+pass=$((pass + ef_pass)); fail=$((fail + ef_fail))
+[ "$ef_pass" -gt 0 ] || { echo "FAIL  the export-frame tests did not run"; fail=$((fail + 1)); }
 
 echo "== Release swap: alt text from marks, Figma export, Google Docs manifest and Apps Script"
 node tests/release-swap-tests.mjs >"$TMP/release-swap-tests.log" 2>&1

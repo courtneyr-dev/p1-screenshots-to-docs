@@ -1,0 +1,359 @@
+{
+  "schemaVersion": 1,
+  "name": "Annotation token contract (test fixture)",
+  "brand": {
+    "yellow": {
+      "hex": "#FFDC28",
+      "group": "primary"
+    },
+    "white": {
+      "hex": "#FFFFFF",
+      "group": "primary"
+    },
+    "purple": {
+      "hex": "#3017A1",
+      "group": "primary"
+    },
+    "black": {
+      "hex": "#23232D",
+      "group": "primary"
+    },
+    "pink": {
+      "hex": "#DE0093",
+      "group": "secondary"
+    },
+    "midPurple": {
+      "hex": "#5F41E5",
+      "group": "secondary"
+    },
+    "lightPurple": {
+      "hex": "#D0C6FF",
+      "group": "secondary"
+    },
+    "green": {
+      "hex": "#218C5F",
+      "group": "secondary"
+    },
+    "blue": {
+      "hex": "#0F62FE",
+      "group": "secondary"
+    },
+    "grey1": {
+      "hex": "#333333",
+      "group": "gray"
+    },
+    "grey2": {
+      "hex": "#777B86",
+      "group": "gray"
+    },
+    "greyLight": {
+      "hex": "#DFDFEC",
+      "group": "gray"
+    }
+  },
+  "roles": {
+    "mark": {
+      "color": "purple",
+      "note": "Default mark and the main emphasis color. Purple leads when Yellow and Black would compete."
+    },
+    "halo": {
+      "color": "white",
+      "note": "Outline under every mark so it survives dark screenshot regions."
+    },
+    "onMark": {
+      "color": "white",
+      "note": "Text on Purple, Ink, Info, Do, and Dont surfaces."
+    },
+    "markYellow": {
+      "color": "yellow",
+      "note": "Marks on dark screenshot regions only. The white halo does not separate Yellow from a light background."
+    },
+    "onYellow": {
+      "color": "purple",
+      "note": "Text on Yellow marks. Purple, not Black, so Yellow never sits against Black at equal weight."
+    },
+    "ink": {
+      "color": "black",
+      "note": "Low-emphasis notes, key caps, and the dim overlay."
+    },
+    "info": {
+      "color": "blue",
+      "note": "Neutral notes."
+    },
+    "do": {
+      "color": "green",
+      "note": "Correct example. Always paired with a check marker; Green and Pink are near-identical in grayscale."
+    },
+    "dont": {
+      "color": "pink",
+      "note": "Mistaken example. Always paired with a cross marker."
+    },
+    "redact": {
+      "color": "black",
+      "note": "Opaque redaction fill."
+    }
+  },
+  "metrics": {
+    "referenceFrameWidth": 1440,
+    "strokePx": 6,
+    "haloStrokePx": 12,
+    "haloOutlinePx": 3,
+    "badgePx": {
+      "S": 32,
+      "M": 48,
+      "L": 64
+    },
+    "labelPaddingPx": {
+      "x": 16,
+      "y": 8
+    },
+    "cornerRadiusPx": {
+      "label": 8,
+      "highlight": 8
+    },
+    "strokeRule": "Strokes are authored for a 1440 px wide frame. At the docs display width a stroke must still render at 2 px or more, so on a wider frame the stroke scales up by frameWidth / displayWidth.",
+    "strokeThinPx": 4,
+    "haloStrokeThinPx": 8
+  },
+  "figmaVariables": {
+    "collections": [
+      {
+        "name": "Annotation primitives",
+        "vars": [
+          {
+            "name": "brand/yellow",
+            "type": "COLOR",
+            "brand": "yellow"
+          },
+          {
+            "name": "brand/white",
+            "type": "COLOR",
+            "brand": "white"
+          },
+          {
+            "name": "brand/purple",
+            "type": "COLOR",
+            "brand": "purple"
+          },
+          {
+            "name": "brand/black",
+            "type": "COLOR",
+            "brand": "black"
+          },
+          {
+            "name": "brand/pink",
+            "type": "COLOR",
+            "brand": "pink"
+          },
+          {
+            "name": "brand/green",
+            "type": "COLOR",
+            "brand": "green"
+          },
+          {
+            "name": "brand/blue",
+            "type": "COLOR",
+            "brand": "blue"
+          }
+        ]
+      },
+      {
+        "name": "Annotation",
+        "vars": [
+          {
+            "name": "color/mark",
+            "type": "COLOR",
+            "role": "mark",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/halo",
+            "type": "COLOR",
+            "role": "halo",
+            "scopes": [
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/on-mark",
+            "type": "COLOR",
+            "role": "onMark",
+            "scopes": [
+              "TEXT_FILL"
+            ]
+          },
+          {
+            "name": "color/mark-gold",
+            "type": "COLOR",
+            "role": "markYellow",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/on-gold",
+            "type": "COLOR",
+            "role": "onYellow",
+            "scopes": [
+              "TEXT_FILL"
+            ]
+          },
+          {
+            "name": "color/ink",
+            "type": "COLOR",
+            "role": "ink",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "TEXT_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/info",
+            "type": "COLOR",
+            "role": "info",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/do",
+            "type": "COLOR",
+            "role": "do",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/dont",
+            "type": "COLOR",
+            "role": "dont",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "color/redact",
+            "type": "COLOR",
+            "role": "redact",
+            "scopes": [
+              "FRAME_FILL",
+              "SHAPE_FILL",
+              "STROKE_COLOR"
+            ]
+          },
+          {
+            "name": "size/stroke",
+            "type": "FLOAT",
+            "metric": "strokePx",
+            "scopes": [
+              "STROKE_FLOAT"
+            ]
+          },
+          {
+            "name": "size/halo-line",
+            "type": "FLOAT",
+            "metric": "haloStrokePx",
+            "scopes": [
+              "STROKE_FLOAT"
+            ]
+          },
+          {
+            "name": "size/halo",
+            "type": "FLOAT",
+            "metric": "haloOutlinePx",
+            "scopes": [
+              "STROKE_FLOAT"
+            ]
+          },
+          {
+            "name": "size/badge",
+            "type": "FLOAT",
+            "scopes": [
+              "WIDTH_HEIGHT"
+            ],
+            "metric": "badgePx.M"
+          },
+          {
+            "name": "size/badge-s",
+            "type": "FLOAT",
+            "scopes": [
+              "WIDTH_HEIGHT"
+            ],
+            "metric": "badgePx.S"
+          },
+          {
+            "name": "size/badge-l",
+            "type": "FLOAT",
+            "scopes": [
+              "WIDTH_HEIGHT"
+            ],
+            "metric": "badgePx.L"
+          },
+          {
+            "name": "size/stroke-thin",
+            "type": "FLOAT",
+            "scopes": [
+              "STROKE_FLOAT"
+            ],
+            "metric": "strokeThinPx"
+          },
+          {
+            "name": "size/halo-line-thin",
+            "type": "FLOAT",
+            "scopes": [
+              "STROKE_FLOAT"
+            ],
+            "metric": "haloStrokeThinPx"
+          },
+          {
+            "name": "radius/label",
+            "type": "FLOAT",
+            "scopes": [
+              "CORNER_RADIUS"
+            ],
+            "metric": "cornerRadiusPx.label"
+          },
+          {
+            "name": "radius/highlight",
+            "type": "FLOAT",
+            "scopes": [
+              "CORNER_RADIUS"
+            ],
+            "metric": "cornerRadiusPx.highlight"
+          },
+          {
+            "name": "spacing/label-x",
+            "type": "FLOAT",
+            "scopes": [
+              "GAP"
+            ],
+            "metric": "labelPaddingPx.x"
+          },
+          {
+            "name": "spacing/label-y",
+            "type": "FLOAT",
+            "scopes": [
+              "GAP"
+            ],
+            "metric": "labelPaddingPx.y"
+          }
+        ]
+      }
+    ]
+  }
+}
