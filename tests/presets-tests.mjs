@@ -248,5 +248,95 @@ await test('release-check uses the config\'s preset source when no source is giv
   assert.equal(r.status, 1); assert.match(r.stderr, /the source is wordpress/);
 });
 
+// ---------- forbiddenNames, final, and the P1 preset's panel and category actions (no browser) ----------
+
+const guardCfg = extra => ({ ...p1Legacy(), ...extra });
+
+await test('forbiddenNames and final are accepted when well formed, and a repeated name only warns', () => {
+  const ok = validateConfig(guardCfg({ forbiddenNames: ['Internal Project', 'Other Name'], final: true }), ['capture']);
+  assert.deepEqual(ok.errors, []);
+  const dup = validateConfig(guardCfg({ forbiddenNames: ['Internal Project', '  internal   project '] }), ['capture']);
+  assert.deepEqual(dup.errors, []);
+  assert.ok(dup.warnings.some(w => /forbiddenNames\[1\] repeats/.test(w)), dup.warnings.join());
+  assert.deepEqual(validateConfig(guardCfg({ forbiddenNames: [] }), ['capture']).errors, []);
+});
+
+await test('forbiddenNames and final are refused when malformed, each with its own key', () => {
+  const key = extra => keys(validateConfig(guardCfg(extra), ['capture']));
+  assert.deepEqual(key({ forbiddenNames: 'Internal Project' }), ['forbiddenNames']);
+  assert.deepEqual(key({ forbiddenNames: ['ok', ''] }), ['forbiddenNames[1]']);
+  assert.deepEqual(key({ forbiddenNames: ['ok', '   '] }), ['forbiddenNames[1]']);
+  assert.deepEqual(key({ forbiddenNames: [42] }), ['forbiddenNames[0]']);
+  assert.deepEqual(key({ forbiddenNames: ['<internal project name>'] }), ['forbiddenNames[0]']);
+  assert.deepEqual(key({ forbiddenNames: ['x'.repeat(201)] }), ['forbiddenNames[0]']);
+  assert.deepEqual(key({ final: 'yes' }), ['final']);
+  assert.deepEqual(key({ final: 1 }), ['final']);
+});
+
+await test('they are validated whatever stage is checked, and preflight reports them and exits 1', () => {
+  assert.deepEqual(keys(validateConfig({ ...guardCfg({ forbiddenNames: [''] }), figma: { fileKey: 'QaQaQaQaQaQaQaQaQaQaQa' } }, ['figma'])), ['forbiddenNames[0]']);
+  const file = join(TMP, 'forbidden-bad.json');
+  writeFileSync(file, JSON.stringify(guardCfg({ forbiddenNames: ['ok', ''], final: 'yes' })));
+  const r = spawnSync(process.execPath, [join(ROOT, 'scripts/preflight.mjs'), '--config', file, '--need', 'capture'], { encoding: 'utf-8' });
+  assert.equal(r.status, 1);
+  assert.match(r.stdout, /forbiddenNames\[1\]: is empty/);
+  assert.match(r.stdout, /final: must be true or false/);
+  const good = join(TMP, 'forbidden-good.json');
+  writeFileSync(good, JSON.stringify(guardCfg({ forbiddenNames: ['Internal Project'], final: true })));
+  assert.equal(spawnSync(process.execPath, [join(ROOT, 'scripts/preflight.mjs'), '--config', good, '--need', 'capture'], { encoding: 'utf-8' }).status, 0);
+});
+
+await test('capture --dry-run reports the count of forbidden names and final, and never prints a name', () => {
+  const file = join(TMP, 'forbidden-dry.json');
+  writeFileSync(file, JSON.stringify(guardCfg({ forbiddenNames: ['Zebra Quartz Project'], final: true })));
+  const run = args => spawnSync(process.execPath, [join(ROOT, 'scripts/capture.mjs'), '--config', file, '--brief', join(ROOT, 'briefs/p1-editor.json'), '--dry-run', ...args], { encoding: 'utf-8' });
+  const r = run([]);
+  assert.equal(r.status, 0, r.stderr);
+  const d = JSON.parse(r.stdout);
+  assert.equal(d.final, true); assert.equal(d.forbiddenNames, 1);
+  assert.ok(!r.stdout.includes('Zebra Quartz') && !r.stderr.includes('Zebra Quartz'));
+  const plain = join(TMP, 'forbidden-dry-plain.json');
+  writeFileSync(plain, JSON.stringify(p1Legacy()));
+  const flag = spawnSync(process.execPath, [join(ROOT, 'scripts/capture.mjs'), '--config', plain, '--brief', join(ROOT, 'briefs/p1-editor.json'), '--dry-run', '--final'], { encoding: 'utf-8' });
+  assert.deepEqual([JSON.parse(flag.stdout).final, JSON.parse(flag.stdout).forbiddenNames], [true, 0], '--final sets it without the config');
+  const off = spawnSync(process.execPath, [join(ROOT, 'scripts/capture.mjs'), '--config', plain, '--brief', join(ROOT, 'briefs/p1-editor.json'), '--dry-run'], { encoding: 'utf-8' });
+  assert.equal(JSON.parse(off.stdout).final, false);
+});
+
+const p1 = loadPreset('p1-editor');
+const clicksToggle = step => step.click === '[aria-label="Toggle left panel"]';
+
+await test('editorReady is unchanged: it still toggles the left panel open when it is not pressed', () => {
+  const a = p1.actions.editorReady;
+  assert.deepEqual(a.steps, [{ click: '[aria-label="Toggle left panel"]', skipIf: '[aria-pressed=true]' }, { wait: 600 }]);
+  assert.deepEqual(a.params, ['projectName', 'pageLabel']);
+});
+
+await test('editorReadyKeepPanel makes every editorReady check and never touches the left panel', () => {
+  const keep = p1.actions.editorReadyKeepPanel, ready = p1.actions.editorReady;
+  assert.ok(keep, 'the action exists');
+  assert.deepEqual(keep.params, ready.params);
+  assert.deepEqual(keep.expect, ready.expect);
+  assert.deepEqual(keep.expectAfter, ready.expectAfter);
+  assert.ok(!keep.steps.some(clicksToggle) && !JSON.stringify(keep.steps).includes('Toggle left panel'));
+  assert.match(keep.description, /1100 px/);
+  assert.match(p1.description, /editorReadyKeepPanel/);
+  assert.match(p1.description, /1100 px/);
+});
+
+await test('expandBlockCategory scrolls the category into view after the click, and the click is still skipped when it is open', () => {
+  const steps = p1.actions.expandBlockCategory.steps;
+  assert.deepEqual(steps[0], { click: 'button[id^=p1-cat-btn-]', text: '{name}', skipIf: '[aria-expanded=true]' });
+  assert.deepEqual(steps[1], { scroll: 'button[id^=p1-cat-btn-]', text: '{name}' });
+  assert.deepEqual(steps[2], { wait: 500 });
+  assert.equal(steps.length, 3);
+});
+
+await test('the starter brief still uses editorReady (a narrow-viewport brief opts in to editorReadyKeepPanel)', () => {
+  const brief = JSON.parse(readFileSync(join(ROOT, 'briefs/p1-editor.json'), 'utf-8'));
+  const used = new Set(brief.shots.flatMap(s => (s.actions || []).map(a => (typeof a === 'string' ? a : Object.keys(a)[0]))));
+  assert.ok(used.has('editorReady') && !used.has('editorReadyKeepPanel'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

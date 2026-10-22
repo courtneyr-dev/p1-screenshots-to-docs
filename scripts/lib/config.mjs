@@ -20,7 +20,7 @@ import { loadPreset, withDefaults, signInEnvVars, DEFAULT_PRESET, SIGN_IN_MODES 
 
 export const TOOL_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
-const KNOWN_KEYS = new Set(['$comment', 'topic', 'preset', 'baseUrl', 'signIn', 'params', 'chrome', 'figma', 'docs']);
+const KNOWN_KEYS = new Set(['$comment', 'topic', 'preset', 'baseUrl', 'signIn', 'params', 'chrome', 'figma', 'docs', 'forbiddenNames', 'final']);
 // Configs written before presets existed keep the P1 editor's values at the top level.
 const LEGACY_P1_KEYS = ['editorRoute', 'projectName', 'workstream', 'pagePath', 'pageNavigation', 'pageLabel', 'blockCategory', 'blockType', 'blockSelector', 'publishMenuLabel'];
 const KNOWN_CHROME = new Set(['profileDir', 'cdpPort']);
@@ -154,6 +154,26 @@ export function validateConfig(cfg, stages = ['capture']) {
     if (pattern && !pattern.test(value)) { err(key, `invalid value "${value}"`); return false; }
     return true;
   };
+
+  // forbiddenNames: names that must never appear in a shot. final: this run's images will ship.
+  if (cfg.forbiddenNames !== undefined) {
+    if (!Array.isArray(cfg.forbiddenNames)) err('forbiddenNames', 'must be an array of names, for example ["Internal Project"]');
+    else {
+      cfg.forbiddenNames.forEach((n, i) => {
+        if (typeof n !== 'string') err(`forbiddenNames[${i}]`, 'must be a string');
+        else if (!n.trim()) err(`forbiddenNames[${i}]`, 'is empty. An empty name would match every page; remove it.');
+        else if (isPlaceholder(n)) err(`forbiddenNames[${i}]`, `still a placeholder ("${n}"). Replace it with the real name, or remove it.`);
+        else if ([...n].some(ch => ch.charCodeAt(0) < 32) || n.length > 200) err(`forbiddenNames[${i}]`, 'contains control characters or is over 200 characters');
+      });
+      const seen = new Set();
+      cfg.forbiddenNames.forEach((n, i) => {
+        const k = typeof n === 'string' ? n.replace(/\s+/g, ' ').trim().toLowerCase() : null;
+        if (k && seen.has(k)) warnings.push(`forbiddenNames[${i}] repeats an earlier entry (names match case-insensitively).`);
+        if (k) seen.add(k);
+      });
+    }
+  }
+  if (cfg.final !== undefined && typeof cfg.final !== 'boolean') err('final', 'must be true or false');
 
   if (need('capture')) {
     str('topic', cfg.topic, { required: true, pattern: /^[a-z0-9][a-z0-9-]*$/, what: 'A short kebab-case name for this set of screenshots, used in run IDs and Figma page names.' });

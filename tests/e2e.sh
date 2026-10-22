@@ -74,7 +74,7 @@ EOF
   python3 - "$TMP/mut-noproof/scripts/capture.mjs" <<'EOF'
 import sys
 p=sys.argv[1]; s=open(p).read()
-a="  if (!probe.ok) throw await fail("; b="  if (!text.toLowerCase().includes(type.toLowerCase())) throw await fail("
+a="  if (!probe.ok) throw await fail("; b="  if (!names.some(n => text.toLowerCase().includes(n.toLowerCase()))) throw await fail("
 assert a in s and b in s
 s=s.replace(a,"  if (false) throw await fail(",1).replace(b,"  if (false) throw await fail(",1)
 open(p,'w').write(s)
@@ -84,6 +84,128 @@ EOF
   t "a selector that points inside a block selects that block and is proven (instance-level)" chk "$E/okselector" shot-ok block-selected-properties
   cap "$E/nosel" --set blockType= --set blockSelector='.not-in-a-block' --only block-selected-properties >"$E/nosel.log" 2>&1
   t "a selector that matches nothing is rejected, not silently skipped" chk "$E/nosel" shot-failed block-selected-properties
+
+  echo "== editor fixture: the panel may name a block by its label instead of its type"
+  start_server 4311 "$FX/mini-editor/server.mjs" 4311 --panel label || exit 1
+  start_server 4312 "$FX/mini-editor/server.mjs" 4312 --panel neither || exit 1
+  start_server 4313 "$FX/mini-editor/server.mjs" 4313 --panel label --toolbar none || exit 1
+  start_server 4314 "$FX/mini-editor/server.mjs" 4314 --panel label --bug neighbor || exit 1
+  cap "$E/label" --set baseUrl=http://localhost:4311 >"$E/label.log" 2>&1
+  t "a block whose panel shows the label (Pull quote) and not the type (PullQuote) is accepted, for both block shots" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/label' shot-ok block-selected-properties && python3 '$ROOT/tests/assert-report.py' '$E/label' shot-ok block-selected-canvas-context && python3 - '$E/label' <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]+'/capture-report.json'))
+assert d['skipped']==[] and len(d['results'])==6 and all(x['ok'] for x in d['results'])
+PY"
+  cap "$E/label-neither" --set baseUrl=http://localhost:4312 --only block-selected-properties >"$E/ln.log" 2>&1
+  t "a panel that names neither the type nor the label fails closed and says so" chk "$E/label-neither" shot-failed block-selected-properties "names neither the selected block's type \"PullQuote\" nor its label \"Pull quote\""
+  cap "$E/label-notoolbar" --set baseUrl=http://localhost:4313 --only block-selected-properties >"$E/lt.log" 2>&1
+  t "a panel that names only the label fails when the overlay shows no label to compare (nothing to prove it)" chk "$E/label-notoolbar" shot-failed block-selected-properties "the selected overlay shows none"
+  cap "$E/label-bug" --set baseUrl=http://localhost:4314 >"$E/lb.log" 2>&1
+  t "a label-naming editor that selects the NEXT block is still rejected as a different block" chk "$E/label-bug" neighbor-rejected
+  rm -rf "$TMP/mut-nolabel" && mkdir -p "$TMP/mut-nolabel" && cp -R scripts "$TMP/mut-nolabel/scripts" && cp -R briefs "$TMP/mut-nolabel/briefs" && ln -s "$ROOT/node_modules" "$TMP/mut-nolabel/node_modules"
+  python3 - "$TMP/mut-nolabel/scripts/capture.mjs" <<'EOF'
+import sys
+p=sys.argv[1]; s=open(p).read()
+a="const names = [type, probe.label].filter(Boolean);"
+assert a in s
+open(p,'w').write(s.replace(a,"const names = [type].filter(Boolean);",1))
+EOF
+  t "MUTATION: without the label branch the label-naming editor fails, so the label is what lets it pass" bash -c "cd '$TMP/mut-nolabel' && node scripts/capture.mjs --brief briefs/p1-editor.json --config '$E2E_CFG' --set baseUrl=http://localhost:4311 --only block-selected-properties --out-dir '$E/mutlabel' >'$E/mutlabel.log' 2>&1; python3 '$ROOT/tests/assert-report.py' '$E/mutlabel' shot-failed block-selected-properties 'names neither'"
+
+  echo "== editor fixture: the left panel (editorReadyKeepPanel) and a category below the fold (expandBlockCategory)"
+  start_server 4315 "$FX/mini-editor/server.mjs" 4315 --left collapsed || exit 1
+  start_server 4316 "$FX/mini-editor/server.mjs" 4316 --filler 12 || exit 1
+  python3 - "$E" <<'EOF'
+import json,sys
+e=sys.argv[1]
+b=json.load(open('briefs/p1-editor.json'))
+b['shots']=[]
+panel={"selector":'[aria-label="Toggle left panel"][aria-pressed=false]'}
+for slug,act in (('keep','editorReadyKeepPanel'),('ready','editorReady')):
+    b['shots'].append({"slug":slug,"url":"{{editorUrl}}","delay":300,"actions":[{act:{"projectName":"{{projectName}}","pageLabel":"{{pageLabel}}"}}],"expectAfter":[panel]})
+json.dump(b,open(e+'/panel-brief.json','w'))
+b['shots']=[{"slug":"fold","url":"{{editorUrl}}","delay":300,"viewport":[1100,500],
+  "actions":[{"editorReady":{"projectName":"{{projectName}}","pageLabel":"{{pageLabel}}"}},{"expandBlockCategory":{"name":"P1 Editorial"}}],
+  "steps":[{"check":{"selector":"body[data-grid-visible=true]"},"timeout":3000}]}]
+json.dump(b,open(e+'/fold-brief.json','w'))
+EOF
+  node scripts/capture.mjs --brief "$E/panel-brief.json" --config "$E2E_CFG" --set baseUrl=http://localhost:4315 --out-dir "$E/panel" >"$E/panel.log" 2>&1
+  t "with the panel collapsed on load, editorReadyKeepPanel leaves it collapsed (the shot passes)" chk "$E/panel" shot-ok keep
+  t "CONTROL: on the same page editorReady opens the panel, so a check that it is collapsed fails (the old behavior stays available)" chk "$E/panel" shot-failed ready "aria-pressed=false"
+  node scripts/capture.mjs --brief "$E/fold-brief.json" --config "$E2E_CFG" --set baseUrl=http://localhost:4316 --out-dir "$E/fold" >"$E/fold.log" 2>&1
+  t "an already-open category below the fold is scrolled into view, so its blocks are on screen (viewport 1100 x 500)" chk "$E/fold" shot-ok fold
+  rm -rf "$TMP/mut-noscroll" && mkdir -p "$TMP/mut-noscroll" && cp -R scripts "$TMP/mut-noscroll/scripts" && cp -R briefs "$TMP/mut-noscroll/briefs" && ln -s "$ROOT/node_modules" "$TMP/mut-noscroll/node_modules"
+  python3 - "$TMP/mut-noscroll/scripts/presets/p1-editor.json" <<'EOF'
+import json,sys
+p=sys.argv[1]; d=json.load(open(p)); st=d['actions']['expandBlockCategory']['steps']
+assert [list(x)[0] for x in st]==['click','scroll','wait'], st
+del st[1]
+open(p,'w').write(json.dumps(d,indent=2))
+EOF
+  t "MUTATION: without the scroll step the same shot fails (the open category stays below the fold)" bash -c "cd '$TMP/mut-noscroll' && node scripts/capture.mjs --brief '$E/fold-brief.json' --config '$E2E_CFG' --set baseUrl=http://localhost:4316 --out-dir '$E/mutfold' >'$E/mutfold.log' 2>&1; python3 '$ROOT/tests/assert-report.py' '$E/mutfold' shot-failed fold 'data-grid-visible'"
+
+  echo "== editor fixture: forbidden names and --final"
+  start_server 4317 "$FX/mini-editor/server.mjs" 4317 --note "Internal codename Orion" || exit 1
+  start_server 4318 "$FX/mini-editor/server.mjs" 4318 --dev-overlay || exit 1
+  python3 - "$TMP" <<'EOF'
+import json,sys
+tmp=sys.argv[1]; base=json.load(open(tmp+'/e2e.json'))
+def make(name,**extra):
+    c=dict(base); c.update(extra); json.dump(c,open(f'{tmp}/e2e-{name}.json','w'))
+make('forbid-header',forbiddenNames=['fixture PROJECT'])
+make('forbid-note',forbiddenNames=['unrelated name','orion'])
+make('forbid-frame',forbiddenNames=['preview of /about'])
+make('forbid-none',forbiddenNames=['Nonexistent Corp','Other Name'])
+make('final',final=True)
+EOF
+  capf() { local cfg=$1 out=$2; shift 2; node scripts/capture.mjs --brief briefs/p1-editor.json --config "$cfg" --only editor-shell --out-dir "$out" "$@"; }
+  capf "$TMP/e2e-forbid-header.json" "$E/fb-header" >"$E/fbh.log" 2>&1
+  t "a forbidden name in the header's site label fails the shot (case-insensitive), names the entry and where, and saves no PNG" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/fb-header' shot-failed editor-shell \"forbiddenNames[0] appears in the editor header's site label\" && [ ! -e '$E/fb-header/editor-shell.png' ]"
+  capf "$TMP/e2e-forbid-note.json" "$E/fb-note" --set baseUrl=http://localhost:4317 >"$E/fbn.log" 2>&1
+  t "a forbidden name in the page text fails the shot (the second entry matched), and saves no PNG" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/fb-note' shot-failed editor-shell 'forbiddenNames[1] appears in the page text' && [ ! -e '$E/fb-note/editor-shell.png' ]"
+  t "the forbidden name is never printed: not on the console, and not in the shot's error in the report" bash -c "! grep -qi 'orion' '$E/fbn.log' '$E/fb-note/capture-report.json' && ! grep -qi 'fixture project' '$E/fbh.log' && python3 - '$E/fb-header' <<'PY'
+import json,sys
+e=json.load(open(sys.argv[1]+'/capture-report.json'))['results'][0]['error']
+assert 'forbiddenNames[0]' in e and 'fixture' not in e.lower(), e
+PY"
+  capf "$TMP/e2e-forbid-frame.json" "$E/fb-frame" >"$E/fbf.log" 2>&1
+  t "a forbidden name that only appears inside the preview frame fails the shot" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/fb-frame' shot-failed editor-shell 'forbiddenNames[0] appears in the text of a frame' && [ ! -e '$E/fb-frame/editor-shell.png' ]"
+  capf "$TMP/e2e-forbid-none.json" "$E/fb-none" --set baseUrl=http://localhost:4317 >"$E/fbo.log" 2>&1
+  t "CONTROL: names that are not on the page let the same shot through, and it saves its PNG" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/fb-none' shot-ok editor-shell && [ -s '$E/fb-none/editor-shell.png' ]"
+  rm -rf "$TMP/mut-noforbid" && mkdir -p "$TMP/mut-noforbid" && cp -R scripts "$TMP/mut-noforbid/scripts" && cp -R briefs "$TMP/mut-noforbid/briefs" && ln -s "$ROOT/node_modules" "$TMP/mut-noforbid/node_modules"
+  python3 - "$TMP/mut-noforbid/scripts/capture.mjs" <<'EOF'
+import sys
+p=sys.argv[1]; s=open(p).read()
+a="  await requireNoForbiddenNames(page);\n"
+assert a in s
+open(p,'w').write(s.replace(a,"",1))
+EOF
+  t "MUTATION: with the forbidden-name check removed the leaking shot is wrongly accepted (so the check is what rejects it)" bash -c "cd '$TMP/mut-noforbid' && node scripts/capture.mjs --brief briefs/p1-editor.json --config '$TMP/e2e-forbid-note.json' --set baseUrl=http://localhost:4317 --only editor-shell --out-dir '$E/mutfb' >'$E/mutfb.log' 2>&1; python3 '$ROOT/tests/assert-report.py' '$E/mutfb' shot-ok editor-shell"
+  capf "$TMP/e2e.json" "$E/draft" --set baseUrl=http://localhost:4318 >"$E/draft.log" 2>&1
+  t "a draft run captures a shot that shows the dev overlay and records devMode: true" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/draft' shot-ok editor-shell && python3 - '$E/draft' <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]+'/capture-report.json'))
+assert d['results'][0]['devMode'] is True and 'final' not in d, d
+PY"
+  capf "$TMP/e2e.json" "$E/final-flag" --set baseUrl=http://localhost:4318 --final >"$E/ff.log" 2>&1
+  t "--final fails a shot whose result has devMode: true, saves no PNG, and the report says it was a final run" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/final-flag' shot-failed editor-shell 'final run: the Next.js dev overlay' && [ ! -e '$E/final-flag/editor-shell.png' ] && python3 - '$E/final-flag' <<'PY'
+import json,sys
+d=json.load(open(sys.argv[1]+'/capture-report.json'))
+assert d['final'] is True and d['results'][0]['blocked']=='dev-mode', d
+PY"
+  capf "$TMP/e2e-final.json" "$E/final-cfg" --set baseUrl=http://localhost:4318 >"$E/fc.log" 2>&1
+  t "config final: true does the same without the flag" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/final-cfg' shot-failed editor-shell 'final run' && [ ! -e '$E/final-cfg/editor-shell.png' ]"
+  capf "$TMP/e2e-final.json" "$E/final-ok" >"$E/fo.log" 2>&1
+  t "CONTROL: a final run passes a shot with no dev overlay" bash -c "python3 '$ROOT/tests/assert-report.py' '$E/final-ok' shot-ok editor-shell && [ -s '$E/final-ok/editor-shell.png' ]"
+  rm -rf "$TMP/mut-nofinal" && mkdir -p "$TMP/mut-nofinal" && cp -R scripts "$TMP/mut-nofinal/scripts" && cp -R briefs "$TMP/mut-nofinal/briefs" && ln -s "$ROOT/node_modules" "$TMP/mut-nofinal/node_modules"
+  python3 - "$TMP/mut-nofinal/scripts/capture.mjs" <<'EOF'
+import sys
+p=sys.argv[1]; s=open(p).read()
+a="  if (FINAL_RUN) {\n    const dev"
+assert a in s
+open(p,'w').write(s.replace(a,"  if (false) {\n    const dev",1))
+EOF
+  t "MUTATION: with the final check removed, --final wrongly accepts the dev-overlay shot" bash -c "cd '$TMP/mut-nofinal' && node scripts/capture.mjs --brief briefs/p1-editor.json --config '$TMP/e2e-final.json' --set baseUrl=http://localhost:4318 --only editor-shell --out-dir '$E/mutfinal' >'$E/mutfinal.log' 2>&1; python3 '$ROOT/tests/assert-report.py' '$E/mutfinal' shot-ok editor-shell"
 
   echo "== release rehearsal: a UI wording change is caught, then handled by updating the config"
   cap "$E/runB-stale" --set baseUrl=http://localhost:4302 >"$E/bstale.log" 2>&1
