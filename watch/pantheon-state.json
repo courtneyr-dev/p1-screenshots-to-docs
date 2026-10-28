@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-27T13:34:04.412Z",
+  "checked_at": "2026-10-28T13:22:25.821Z",
   "products": {
     "content-publisher-drupal": "1.0.5",
     "terminus": "4.3.3",
@@ -21,7 +21,7 @@
     "wp-saml-auth": "2.3.4",
     "pantheon-secrets": "1.1.0",
     "pantheon-migrations-wp": "6.72",
-    "p1-editor": "0.22.0",
+    "p1-editor": "0.23.0",
     "content-publisher-cli": "5.3.0",
     "wp-tls-compatibility-checker": "1.0.0",
     "wp-launch-check": "0.9.4",
@@ -33,9 +33,9 @@
     "content-publisher-php-sdk": "1.1.2",
     "content-publisher-browser-sdk": "5.3.0",
     "customer-secrets-php-sdk": "1.0.3",
-    "nextjs-cache-handler": "0.13.4",
+    "nextjs-cache-handler": "0.14.0",
     "pantheon-secrets-js": "0.0.2",
-    "create-p1-starter-kit": "0.22.0"
+    "create-p1-starter-kit": "0.23.0"
   },
   "feeds": {
     "pantheon-release-notes": {
